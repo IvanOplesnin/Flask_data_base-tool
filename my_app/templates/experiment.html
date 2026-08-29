@@ -62,8 +62,12 @@
                 <td>{{ i.length_path | round(2)}}</td>
                 <td>{{ i.durability | round(2)}}</td>
                 <td>
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
-                        <a href="/experiments/{{i.id}}/delete" class="btn btn-warning">Удалить</a>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Действия с экспериментом">
+                        {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
+                            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                                    data-delete-url="{{ url_for('web.delete_experiment', experiment_id=i.id) }}"
+                                    data-delete-title="Удаление эксперимента" data-entity-name="эксперимент №{{ i.id }}">Удалить</button>
+                        {% endif %}
                         <a href="/experiments/{{i.id}}/info" class="btn btn-success">Подробнее</a>
                     </div>
                 </td>

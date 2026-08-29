@@ -49,14 +49,17 @@
                 <td>{{ coating.temperature_resistance }}</td>
                 <td>{{ coating.coefficient_friction }}</td>
                 <td>
-                     <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
-                        <a href="/coating/{{coating.id}}/delete" class="btn btn-warning">Удалить</a>
-                        <a href="/coating/{{coating.id}}/update" class="btn btn-success">Изменить</a>
-                    </div>
+                    {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Действия с покрытием">
+                            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                                    data-delete-url="{{ url_for('web.delete_coating', coating_id=coating.id) }}"
+                                    data-delete-title="Удаление покрытия" data-entity-name="покрытие «{{ coating.name }}»">Удалить</button>
+                            <a href="/coating/{{coating.id}}/update" class="btn btn-success">Изменить</a>
+                        </div>
+                    {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
             </tr>
         </tbody>
     </table>
 </div>
 {% endblock %}
-

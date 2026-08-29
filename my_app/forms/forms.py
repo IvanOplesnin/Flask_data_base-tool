@@ -150,8 +150,8 @@ class UserForm(FlaskForm):
     submit = SubmitField('Создать пользователя')
 
 
-class DeleteUserForm(FlaskForm):
-    """Подтверждение удаления пользователя в интерфейсе администратора."""
+class DeleteConfirmationForm(FlaskForm):
+    """CSRF-защищённое подтверждение удаления записи."""
 
     submit = SubmitField('Удалить')
 

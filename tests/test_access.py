@@ -1,5 +1,5 @@
 from my_app.extensions import db
-from my_app.models import User
+from my_app.models import Material, MaterialType, User
 
 
 def create_user(username, password, role):
@@ -40,20 +40,58 @@ def test_login_displays_invalid_credentials_message(client, app):
     assert 'Неверный логин или пароль.'.encode() in response.data
 
 
-def test_admin_can_delete_writer(client, app):
+def test_admin_can_delete_users_with_any_role(client, app):
     app.config['AUTH_REQUIRED'] = True
     with app.app_context():
-        create_user('admin', 'admin-password', 'admin')
-        writer = create_user('writer', 'writer-password', 'writer')
-        writer_id = writer.id
+        create_user('root-admin', 'admin-password', 'admin')
+        users_to_delete = [
+            ('second-admin', create_user('second-admin', 'admin-password', 'admin')),
+            ('writer', create_user('writer', 'writer-password', 'writer')),
+            ('reader', create_user('reader', 'reader-password', 'reader')),
+        ]
+        user_ids = [user.id for _, user in users_to_delete]
 
-    client.post('/login', data={'username': 'admin', 'password': 'admin-password'})
-    response = client.post(f'/users/{writer_id}/delete', follow_redirects=True)
+    client.post('/login', data={'username': 'root-admin', 'password': 'admin-password'})
+    for username, user in users_to_delete:
+        user_id = user.id
+        response = client.post(f'/users/{user_id}/delete', follow_redirects=True)
+        assert response.status_code == 200
+        assert f'Пользователь «{username}» удалён.'.encode() in response.data
+
+    with app.app_context():
+        assert all(db.session.get(User, user_id) is None for user_id in user_ids)
+
+
+def test_writer_can_delete_material(client, app):
+    app.config['AUTH_REQUIRED'] = True
+    with app.app_context():
+        create_user('writer', 'writer-password', 'writer')
+        material = Material(name='40X', material_type=MaterialType(name='Сталь'))
+        db.session.add(material)
+        db.session.commit()
+        material_id = material.id
+
+    client.post('/login', data={'username': 'writer', 'password': 'writer-password'})
+    response = client.post(f'/materials/{material_id}/delete', follow_redirects=True)
 
     assert response.status_code == 200
-    assert 'Пользователь «writer» удалён.'.encode() in response.data
+    assert 'Материал удалён.'.encode() in response.data
     with app.app_context():
-        assert db.session.get(User, writer_id) is None
+        assert db.session.get(Material, material_id) is None
+
+
+def test_reader_cannot_delete_material(client, app):
+    app.config['AUTH_REQUIRED'] = True
+    with app.app_context():
+        create_user('reader', 'reader-password', 'reader')
+        material = Material(name='09Г2С', material_type=MaterialType(name='Сталь'))
+        db.session.add(material)
+        db.session.commit()
+        material_id = material.id
+
+    client.post('/login', data={'username': 'reader', 'password': 'reader-password'})
+
+    assert client.post(f'/materials/{material_id}/delete').status_code == 403
 
 
 def test_writer_can_add_tap(client, app):

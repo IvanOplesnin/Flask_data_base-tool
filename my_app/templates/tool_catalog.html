@@ -4,12 +4,24 @@
 <main class="container py-4">
   <h1>{{ title }}</h1>
   {% if item_type == 'tap' and current_user.role in ['admin', 'writer'] %}<p><a class="btn btn-primary" href="{{ url_for('web.add_tap') }}">Добавить метчик</a></p>{% endif %}
-  <table class="table table-striped"><thead><tr><th>Наименование</th><th>Материал</th><th>Описание</th></tr></thead><tbody>
+  <table class="table table-striped"><thead><tr><th>Наименование</th><th>Материал</th><th>Описание</th><th>Действия</th></tr></thead><tbody>
   {% for item in items %}
     <tr><td>{{ item.name }}</td><td>{{ item.material if item_type == 'insert' else item.material_tool }}</td><td>
       {% if item_type == 'tap' and item.tap_geometry %}{{ item.tap_geometry.thread_standard }}, Ø{{ item.tap_geometry.thread_diameter }}, шаг {{ item.tap_geometry.pitch }}
       {% elif item_type == 'tool' and item.milling_geometry %}{{ item.milling_geometry.type_milling }}, Ø{{ item.milling_geometry.diameter }}
       {% else %}—{% endif %}
+    </td><td>
+      {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
+        {% if item_type == 'insert' %}
+          <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                  data-delete-url="{{ url_for('web.delete_insert', insert_id=item.id) }}"
+                  data-delete-title="Удаление пластины" data-entity-name="режущую пластину «{{ item.name }}»">Удалить</button>
+        {% else %}
+          <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                  data-delete-url="{{ url_for('web.delete_tool', tool_id=item.id) }}"
+                  data-delete-title="Удаление инструмента" data-entity-name="инструмент «{{ item.name }}»">Удалить</button>
+        {% endif %}
+      {% else %}<span class="text-muted">—</span>{% endif %}
     </td></tr>
   {% endfor %}
   </tbody></table>

@@ -1,0 +1,25 @@
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" id="deleteConfirmationForm" class="modal-content">
+      {{ delete_form.hidden_tag() }}
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="deleteConfirmationModalLabel">Удаление</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body" id="deleteConfirmationMessage"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        {{ delete_form.submit(class='btn btn-danger') }}
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+  document.getElementById('deleteConfirmationModal').addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    document.getElementById('deleteConfirmationForm').action = button.dataset.deleteUrl;
+    document.getElementById('deleteConfirmationModalLabel').textContent = button.dataset.deleteTitle || 'Удаление';
+    document.getElementById('deleteConfirmationMessage').textContent =
+      `Вы уверены, что хотите удалить ${button.dataset.entityName}? Это действие нельзя отменить.`;
+  });
+</script>

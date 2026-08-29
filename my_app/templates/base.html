@@ -38,6 +38,9 @@
   </main>
 {% block tittle %}
 {% endblock %}
+{% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
+  {% include '_delete_confirmation_modal.html' %}
+{% endif %}
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 </body>
 </html>

@@ -65,10 +65,14 @@
                 <td>{{ i.properties }}</td>
                 <td>{{ i.gost }}</td>
                 <td>
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
-                        <a href="/materials/{{i.id}}/delete" class="btn btn-warning">Удалить</a>
-                        <a href="/materials/{{i.id}}/update" class="btn btn-success">Изменить</a>
-                    </div>
+                    {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Действия с материалом">
+                            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                                    data-delete-url="{{ url_for('web.delete_materials', material_id=i.id) }}"
+                                    data-delete-title="Удаление материала" data-entity-name="материал «{{ i.name }}»">Удалить</button>
+                            <a href="/materials/{{i.id}}/update" class="btn btn-success">Изменить</a>
+                        </div>
+                    {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -80,6 +84,7 @@
 <!-- JavaScript для автозаполнения и динамического обновления -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+    const canManageRecords = {{ 'true' if current_user.is_authenticated and current_user.role in ['admin', 'writer'] else 'false' }};
     var searchInput = document.getElementById('search_query');
     var typeSelect = document.getElementById('type_id'); // Получаем выпадающий список типов материалов
 
@@ -108,14 +113,15 @@
                         <td>${material.structure}</td>
                         <td>${material.properties}</td>
                         <td>${material.gost}</td>
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
-                                <a href="/materials/${material.id}/delete" class="btn btn-warning">Удалить</a>
-                                <a href="/materials/${material.id}/update" class="btn btn-success">Изменить</a>
-                            </div>
-                        </td>
+                        <td>${canManageRecords ? `<div class="btn-group btn-group-sm" role="group" aria-label="Действия с материалом">
+                            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                                data-delete-url="/materials/${material.id}/delete" data-delete-title="Удаление материала">Удалить</button>
+                            <a href="/materials/${material.id}/update" class="btn btn-success">Изменить</a>
+                        </div>` : '<span class="text-muted">—</span>'}</td>
                         `;
                     tbody.appendChild(row);
+                    const deleteButton = row.querySelector('[data-delete-url]');
+                    if (deleteButton) deleteButton.dataset.entityName = `материал «${material.name}»`;
                     });
                 });
         }

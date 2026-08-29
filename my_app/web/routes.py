@@ -4,13 +4,19 @@ from sqlalchemy.orm import joinedload
 
 from my_app.extensions import db
 from my_app.forms import MaterialForm, CoatingForm, MillingGeometryForm, TurningGeometryForm, DrillGeometryForm, \
-    DeleteUserForm, ExperimentForm, LoginForm, TapForm, ToolForm, UserForm
+    DeleteConfirmationForm, ExperimentForm, LoginForm, TapForm, ToolForm, UserForm
 from my_app.models import Material, Tool, Coating, Experiment, RecommendationParameter, Adhesive, Coefficient, \
     MaterialType, MillingGeometry, WearMeasurement, DrillGeometry, TurningGeometry, Insert, TapGeometry, User
 from my_app.security import roles_required
 from my_app.services.calculations import calculate_cutting_parameters
 
 web_bp = Blueprint('web', __name__)
+
+
+@web_bp.app_context_processor
+def inject_delete_confirmation_form():
+    """Делает CSRF-токен доступным для единого модального окна удаления."""
+    return {'delete_form': DeleteConfirmationForm()}
 
 
 @web_bp.before_request
@@ -60,25 +66,20 @@ def users():
     return render_template(
         'users.html',
         form=form,
-        delete_form=DeleteUserForm(),
         users=db.session.scalars(db.select(User).order_by(User.username)).all(),
     )
 
 
 @web_bp.route('/users/<int:user_id>/delete', methods=['POST'])
 @roles_required('admin')
-def delete_writer(user_id):
-    """Удаляет пользователя с ролью «Писатель» после подтверждения формы."""
-    form = DeleteUserForm()
+def delete_user(user_id):
+    """Удаляет выбранную учётную запись после подтверждения администратора."""
+    form = DeleteConfirmationForm()
     if not form.validate_on_submit():
         flash('Не удалось подтвердить удаление пользователя.', 'danger')
         return redirect(url_for('web.users'))
 
     user = db.get_or_404(User, user_id)
-    if user.role != 'writer':
-        flash('Удалять можно только пользователей с ролью «Писатель».', 'warning')
-        return redirect(url_for('web.users'))
-
     username = user.username
     db.session.delete(user)
     db.session.commit()
@@ -401,16 +402,22 @@ def calculate():
     })
 
 
-@web_bp.route('/materials/<int:material_id>/delete')
-@roles_required('admin')
+@web_bp.route('/materials/<int:material_id>/delete', methods=['POST'])
+@roles_required('admin', 'writer')
 def delete_materials(material_id):
+    if not DeleteConfirmationForm().validate_on_submit():
+        flash('Не удалось подтвердить удаление материала.', 'danger')
+        return redirect('/materials')
     entity_to_delete = Material.query.get_or_404(material_id)
     try:
         db.session.delete(entity_to_delete)
         db.session.commit()
+        flash('Материал удалён.', 'success')
         return redirect('/materials')
     except Exception:
-        return 'Ошибка при удалении'
+        db.session.rollback()
+        flash('Не удалось удалить материал: он может использоваться в других записях.', 'danger')
+        return redirect('/materials')
 
 
 @web_bp.route('/materials/<int:material_id>/update', methods=['GET', 'POST'])
@@ -473,16 +480,22 @@ def coatings():
     return render_template('coating.html', coatings=pagination.items, pagination=pagination, search_query=search_query)
 
 
-@web_bp.route('/coating/<int:coating_id>/delete')
-@roles_required('admin')
+@web_bp.route('/coating/<int:coating_id>/delete', methods=['POST'])
+@roles_required('admin', 'writer')
 def delete_coating(coating_id):
+    if not DeleteConfirmationForm().validate_on_submit():
+        flash('Не удалось подтвердить удаление покрытия.', 'danger')
+        return redirect('/coatings')
     entity_to_delete = Coating.query.get_or_404(coating_id)
     try:
         db.session.delete(entity_to_delete)
         db.session.commit()
+        flash('Покрытие удалено.', 'success')
         return redirect('/coatings')
-    except:
-        return 'Ошибка при удалении'
+    except Exception:
+        db.session.rollback()
+        flash('Не удалось удалить покрытие: оно может использоваться в других записях.', 'danger')
+        return redirect('/coatings')
 
 
 @web_bp.route('/coating/<int:coating_id>/update', methods=['GET', 'POST'])
@@ -590,23 +603,50 @@ def add_tap():
     return render_template('tap_form.html', form=form)
 
 
-@web_bp.route('/tool/<int:tool_id>/delete')
-@roles_required('admin')
+@web_bp.route('/tool/<int:tool_id>/delete', methods=['POST'])
+@roles_required('admin', 'writer')
 def delete_tool(tool_id):
+    if not DeleteConfirmationForm().validate_on_submit():
+        flash('Не удалось подтвердить удаление инструмента.', 'danger')
+        return redirect('/tools')
     entity_to_delete = Tool.query.get_or_404(tool_id)
     tool_geometry = [getattr(entity_to_delete, 'milling_geometry'),
                      getattr(entity_to_delete, 'turning_geometry'),
-                     getattr(entity_to_delete, 'drill_geometry')]
+                     getattr(entity_to_delete, 'drill_geometry'),
+                     getattr(entity_to_delete, 'tap_geometry')]
 
     try:
         db.session.delete(entity_to_delete)
         for geom in tool_geometry:
             if geom:
                 db.session.delete(geom)
+        for insert in entity_to_delete.insert:
+            db.session.delete(insert)
         db.session.commit()
+        flash('Инструмент удалён.', 'success')
         return redirect('/tools')
-    except:
-        return 'Ошибка при удалении'
+    except Exception:
+        db.session.rollback()
+        flash('Не удалось удалить инструмент: он может использоваться в других записях.', 'danger')
+        return redirect('/tools')
+
+
+@web_bp.route('/inserts/<int:insert_id>/delete', methods=['POST'])
+@roles_required('admin', 'writer')
+def delete_insert(insert_id):
+    if not DeleteConfirmationForm().validate_on_submit():
+        flash('Не удалось подтвердить удаление пластины.', 'danger')
+        return redirect(url_for('web.inserts_catalog'))
+
+    insert = Insert.query.get_or_404(insert_id)
+    try:
+        db.session.delete(insert)
+        db.session.commit()
+        flash('Режущая пластина удалена.', 'success')
+    except Exception:
+        db.session.rollback()
+        flash('Не удалось удалить режущую пластину.', 'danger')
+    return redirect(url_for('web.inserts_catalog'))
 
 
 @web_bp.route('/tool/<int:tool_id>/update', methods=['GET', 'POST'])
@@ -773,9 +813,12 @@ def experiments_table():
                            request_args=request.args)
 
 
-@web_bp.route('/experiments/<int:experiment_id>/delete')
-@roles_required('admin')
+@web_bp.route('/experiments/<int:experiment_id>/delete', methods=['POST'])
+@roles_required('admin', 'writer')
 def delete_experiment(experiment_id):
+    if not DeleteConfirmationForm().validate_on_submit():
+        flash('Не удалось подтвердить удаление эксперимента.', 'danger')
+        return redirect('/experiments')
     experiment: Experiment = Experiment.query.get_or_404(experiment_id)
     wear_table: list[WearMeasurement] = WearMeasurement.query.filter_by(experiment_id=experiment_id).all()
     for row in wear_table:
@@ -783,9 +826,12 @@ def delete_experiment(experiment_id):
     db.session.delete(experiment)
     try:
         db.session.commit()
+        flash('Эксперимент удалён.', 'success')
         return redirect('/experiments')
-    except Exception as e:
-        return f'Ошибка {e} при удалении эксперимента'
+    except Exception:
+        db.session.rollback()
+        flash('Не удалось удалить эксперимент.', 'danger')
+        return redirect('/experiments')
 
 
 @web_bp.route('/experiment/add', methods=['GET', 'POST'])

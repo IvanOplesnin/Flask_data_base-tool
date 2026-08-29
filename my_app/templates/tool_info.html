@@ -128,8 +128,12 @@
         <!-- Действия -->
         <tr>
             <td colspan="2" class="text-center">
-                <a href="/tool/{{ tool.id }}/delete" class="btn btn-warning">Удалить</a>
-                <a href="/tool/{{ tool.id }}/update" class="btn btn-success">Изменить</a>
+                {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
+                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                            data-delete-url="{{ url_for('web.delete_tool', tool_id=tool.id) }}"
+                            data-delete-title="Удаление инструмента" data-entity-name="инструмент «{{ tool.name }}»">Удалить</button>
+                    <a href="/tool/{{ tool.id }}/update" class="btn btn-success">Изменить</a>
+                {% else %}<span class="text-muted">—</span>{% endif %}
             </td>
         </tr>
     </table>

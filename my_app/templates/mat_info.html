@@ -43,12 +43,14 @@
                 <td>{{ material.structure }}</td>
                 <td>{{ material.properties }} </td>
                 <td>{{ material.gost }} </td>
-                <td><a href="/materials/{{material.id}}/delete"  class="btn btn-warning">Удалить</a>
-                <a href="/materials/{{material.id}}/update"  class="btn btn-success">Изменить</a>
-                </td>
+                <td>{% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
+                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                            data-delete-url="{{ url_for('web.delete_materials', material_id=material.id) }}"
+                            data-delete-title="Удаление материала" data-entity-name="материал «{{ material.name }}»">Удалить</button>
+                    <a href="/materials/{{material.id}}/update"  class="btn btn-success">Изменить</a>
+                {% else %}<span class="text-muted">—</span>{% endif %}</td>
             </tr>
         </tbody>
     </table>
 </div>
 {% endblock %}
-
