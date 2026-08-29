@@ -1,11 +1,11 @@
-from flask import render_template, request, redirect, jsonify, flash, url_for
+from flask import render_template, request, redirect, jsonify, flash, url_for, session
 from sqlalchemy.orm import joinedload
 
 from my_app import app, db
 from my_app.forms import MaterialForm, CoatingForm, MillingGeometryForm, TurningGeometryForm, DrillGeometryForm, \
     ExperimentForm, ToolForm
 from my_app.models import Materials, Tools, Coating, Experiments, RecommendationParameters, Adhesive, Coefficients, \
-    MaterialType, MillingGeometry, WearTables, DrillGeometry, TurningGeometry
+    MaterialType, MillingGeometry, WearTables, DrillGeometry, TurningGeometry, Insert
 
 
 @app.route('/')
@@ -130,14 +130,62 @@ def add():
                     )
 
                     new_tool.milling_geometry = new_milling_geometry
+                    if milling_geometry_form.insert.data:
+                        new_tool.insert.append(Insert(name=milling_geometry_form.insert.data))
                     db.session.add(new_tool)
                     db.session.commit()
                     return redirect('/add')
                 else:
-                    return 'Не пройдена валидация'
+                    flash('Исправьте ошибки в форме фрезы.', 'danger')
+
+            if turning_form.submit.data and turning_form.validate_on_submit():
+                new_tool = Tools(
+                    name=turning_form.name.data,
+                    name_easy=turning_form.name_easy.data,
+                    tool_type=turning_form.tool_type,
+                    material_tool=turning_form.material_tool.data,
+                    is_indexable=turning_form.is_indexable.data,
+                )
+                new_tool.turning_geometry = TurningGeometry(
+                    turning_type=turning_form.turning_type.data,
+                    front_angle=turning_form.front_angle.data,
+                    main_rear_angle=turning_form.main_rear_angle.data,
+                    sharpening_angle=turning_form.sharpening_angle.data,
+                    cutting_angle=turning_form.cutting_angle.data,
+                    aux_rear_angle=turning_form.aux_rear_angle.data,
+                )
+                if turning_form.insert.data:
+                    new_tool.insert.append(Insert(name=turning_form.insert.data))
+                db.session.add(new_tool)
+                db.session.commit()
+                return redirect('/add')
+
+            if drill_form.submit.data and drill_form.validate_on_submit():
+                new_tool = Tools(
+                    name=drill_form.name.data,
+                    name_easy=drill_form.name_easy.data,
+                    tool_type=drill_form.tool_type,
+                    material_tool=drill_form.material_tool.data,
+                    is_indexable=drill_form.is_indexable.data,
+                )
+                new_tool.drill_geometry = DrillGeometry(
+                    drill_type=drill_form.drill_type.data,
+                    diameter=drill_form.diameter.data,
+                    screw_angle=drill_form.screw_angle.data,
+                    top_angle=drill_form.top_angle.data,
+                    front_angle=drill_form.front_angle.data,
+                    rear_angle=drill_form.rear_angle.data,
+                    transverse_edge_angle=drill_form.transverse_edge_angle.data,
+                )
+                if drill_form.insert.data:
+                    new_tool.insert.append(Insert(name=drill_form.insert.data))
+                db.session.add(new_tool)
+                db.session.commit()
+                return redirect('/add')
 
         except Exception as e:
-            return f'Ошибка: {e}'
+            db.session.rollback()
+            flash('Не удалось сохранить данные. Проверьте уникальность названия и значения полей.', 'danger')
 
     return render_template('add.html', material_form=material_form, coating_form=coating_form,
                            milling_geometry_form=milling_geometry_form, turning_form=turning_form,
@@ -209,19 +257,20 @@ def get_materials_by_type(type_id):
 
 @app.route('/calculate')
 def calculate():
-    cutting_speed_value = request.args.get('cutting_speed', '0')  # Получаем значение как строку
+    cutting_speed_value = request.args.get('cutting_speed', '0')
     try:
         cutting_speed = float(cutting_speed_value)  # Пробуем преобразовать в float
     except ValueError:
-        cutting_speed = 0  # В случае ошибки устанавливаем значение по умолчанию
-        print(f"Некорректное значение cutting_speed: {cutting_speed_value}")
+        return jsonify(error='cutting_speed должен быть числом больше нуля'), 400
 
     feed_per_tooth_value = request.args.get('feed_per_tooth', '0')
     try:
         feed_per_tooth = float(feed_per_tooth_value)
     except ValueError:
-        feed_per_tooth = 0
-        print(f"Некорректное значение feed_per_tooth: {feed_per_tooth_value}")
+        return jsonify(error='feed_per_tooth должен быть числом больше нуля'), 400
+
+    if cutting_speed <= 0 or feed_per_tooth <= 0:
+        return jsonify(error='cutting_speed и feed_per_tooth должны быть больше нуля'), 400
 
     material_id = request.args.get('material_id')
     tool_id = request.args.get('tool_id')
@@ -359,9 +408,9 @@ def coating_update(coating_id):
                 coating.name = coating_form.name.data
                 coating.material_coating = coating_form.material_coating.data
                 coating.max_thickness = coating_form.max_thickness.data
-                coating.nanohardness = coating_form.nanohardness.data
+                coating.nano_hardness = coating_form.nanohardness.data
                 coating.temperature_resistance = coating_form.temperature_resistance.data
-                coating.koefficient_friction = coating_form.koefficient_friction.data
+                coating.coefficient_friction = coating_form.koefficient_friction.data
                 coating.color_coating = coating_form.color_coating.data
 
                 db.session.commit()
@@ -513,7 +562,7 @@ def tool_update(tool_id):
         try:
             db.session.commit()
             flash('Инструмент успешно обновлен!', 'success')
-            return redirect(url_for('tools_list'))
+            return redirect(url_for('tools'))
         except Exception as e:
             db.session.rollback()
             flash(f'Ошибка при обновлении инструмента: {e}', 'danger')
@@ -534,10 +583,10 @@ def tools_info(tool_id):
 def experiments_table():
     material_filter = request.args.get('material', '')
     coating_filter = request.args.get('coating', '')
-    spindle_min = request.args.get('spindle_min')
-    spindle_max = request.args.get('spindle_max')
-    feed_min = request.args.get('feed_min')
-    feed_max = request.args.get('feed_max')
+    spindle_min = request.args.get('spindle_min', type=float)
+    spindle_max = request.args.get('spindle_max', type=float)
+    feed_min = request.args.get('feed_min', type=float)
+    feed_max = request.args.get('feed_max', type=float)
     sort_by = request.args.get('sort_by')
     order = request.args.get('order', 'asc')
 
@@ -552,18 +601,19 @@ def experiments_table():
         experiments_query = [exp for exp in experiments_query if coating_filter.lower() in exp.coating.name.lower()]
 
     if spindle_min:
-        experiments_query = [exp for exp in experiments_query if exp.spindle_speed >= float(spindle_min)]
+        experiments_query = [exp for exp in experiments_query if exp.spindle_speed >= spindle_min]
 
     if spindle_max:
-        experiments_query = [exp for exp in experiments_query if exp.spindle_speed <= float(spindle_max)]
+        experiments_query = [exp for exp in experiments_query if exp.spindle_speed <= spindle_max]
 
     if feed_min:
-        experiments_query = [exp for exp in experiments_query if exp.feed_table >= float(feed_min)]
+        experiments_query = [exp for exp in experiments_query if exp.feed_table >= feed_min]
 
     if feed_max:
-        experiments_query = [exp for exp in experiments_query if exp.feed_table <= float(feed_max)]
+        experiments_query = [exp for exp in experiments_query if exp.feed_table <= feed_max]
 
-    if sort_by:
+    sortable_fields = {'spindle_speed', 'feed_table', 'length_path', 'durability', 'data_experiment'}
+    if sort_by in sortable_fields:
         reverse = (order == 'desc')
         experiments_query = sorted(experiments_query, key=lambda x: getattr(x, sort_by), reverse=reverse)
 
@@ -621,6 +671,7 @@ def add_experiment():
             db.session.commit()
 
             flash(f'Добавлен новый эксперимент: Номер - {new_experiment.id}', 'success')
+            return redirect(url_for('experiments_info', experiment_id=new_experiment.id))
         else:
             print(form.errors)
     return render_template('add_experiment.html', form=form)
@@ -701,14 +752,21 @@ def expected_parameters():
 
 @app.route('/update_graph_data', methods=['POST'])
 def update_graph_data():
-    data = request.json
-    material_id = data.get('material_id')
-    tool_id = data.get('tool_id')
-    coating_id = data.get('coating_id')
+    data = request.get_json(silent=True) or {}
+    try:
+        material_id = int(data['material_id'])
+        tool_id = int(data['tool_id'])
+        coating_id = int(data['coating_id'])
+    except (KeyError, TypeError, ValueError):
+        return jsonify(status='error', error='material_id, tool_id и coating_id должны быть целыми числами'), 400
 
     tool = Tools.query.get(tool_id)
-    diameter = tool.milling_geometry.diameter if tool.milling_geometry else None
-    count_of_teeth = tool.milling_geometry.number_teeth if tool.milling_geometry else None
+    if not tool or not tool.milling_geometry:
+        return jsonify(status='error', error='Для расчёта требуется существующая фреза с геометрией'), 400
+    diameter = tool.milling_geometry.diameter
+    count_of_teeth = tool.milling_geometry.number_teeth
+    if not diameter or diameter <= 0 or not count_of_teeth or count_of_teeth <= 0:
+        return jsonify(status='error', error='Диаметр и число зубьев должны быть больше нуля'), 400
 
     coefficient: Coefficients = Coefficients.query.filter_by(
         material_id=material_id,
@@ -717,9 +775,9 @@ def update_graph_data():
     ).first()
 
     if not coefficient:
-        app.config['GRAPH_DATA'] = {}
+        session.pop('graph_data', None)
     else:
-        app.config['GRAPH_DATA'] = {
+        session['graph_data'] = {
             'cutting_force_coefficient': coefficient.cutting_force_coefficient,
             'cutting_temperature_coefficient': coefficient.cutting_temperature_coefficient,
             'durability_coefficient': coefficient.durability_coefficient,

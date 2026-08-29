@@ -84,7 +84,7 @@ class TurningGeometryForm(FlaskForm):
 
 
 class DrillGeometryForm(FlaskForm):
-    tool_type = 'turning'
+    tool_type = 'drilling'
     name = StringField('Введите код инструмента', validators=[DataRequired()])
     material_tool = StringField('Материал инструмента')
     name_easy = StringField('Название инструмента', validators=[DataRequired()])
@@ -131,5 +131,4 @@ class ExperimentForm(FlaskForm):
         self.material_id.choices = [(mt.id, mt.name) for mt in Materials.query.all()]
         self.tool_id.choices = [(t.id, t.name) for t in Tools.query.all()]
         self.coating_id.choices = [(c.id, c.name) for c in Coating.query.all()]
-
 

@@ -132,8 +132,9 @@ def create_dash(flask_app):
          ]
     )
     def update_graph_and_calculations(selected_parameter, speed_slider, supply_slider, input_speed, input_supply):
-        # Получаем коэффициенты из `flask_app.config`
-        graph_data = flask_app.config.get('GRAPH_DATA', {})
+        # Данные принадлежат текущей пользовательской сессии, а не процессу Flask.
+        from flask import session
+        graph_data = session.get('graph_data', {})
 
         # Проверяем наличие коэффициентов
         if not graph_data:

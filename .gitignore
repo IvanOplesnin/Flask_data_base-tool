@@ -1,0 +1,12 @@
+.idea/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.venv/
+venv/
+.env
+
+# Локальные рабочие базы и пользовательские загрузки не должны попадать в Git.
+*.db
+uploads/

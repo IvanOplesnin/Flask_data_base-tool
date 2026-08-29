@@ -38,8 +38,8 @@
                 'milling' %}selected{% endif %}>Фреза</option>
                 <option value="turning" {% if selected_tool_type==
                 'turning' %}selected{% endif %}>Токарный инструмент</option>
-                <option value="drill" {% if selected_tool_type==
-                'drill' %}selected{% endif %}>Сверло</option>
+                <option value="drilling" {% if selected_tool_type==
+                'drilling' %}selected{% endif %}>Сверло</option>
             </select>
         </div>
         <div class="form-group mr-2">
@@ -65,13 +65,13 @@
         <tr>
             <td>
                     <span class="expand-button" onclick="toggleDetails({{ tool.id }})">
-                        {{ tool.name }} ({{ tool.name_easy }}) - {{ tool.milling_geometry.type_milling }}
+                        {{ tool.name }}{% if tool.name_easy %} ({{ tool.name_easy }}){% endif %}
                     </span>
             </td>
             <td>{{ tool.material_tool }}</td>
             <td>
                 {% if tool.is_indexable %}
-                    {{ tool.index.inserts }}
+                    {% for insert in tool.insert %}{{ insert.name }}{% if not loop.last %}, {% endif %}{% endfor %}
                 {% else %}
                     Цельный инстурмент
                 {% endif %}
@@ -101,7 +101,7 @@
                     <strong>Угол заточки:</strong> {{ tool.turning_geometry.sharpening_angle }}°<br>
                     <strong>Угол резания:</strong> {{ tool.turning_geometry.cutting_angle }}°<br>
                     <strong>Вспомогательный задний угол:</strong> {{ tool.turning_geometry.aux_rear_angle }}°<br>
-                {% elif tool.tool_type == 'drill' and tool.drill_geometry %}
+                {% elif tool.tool_type == 'drilling' and tool.drill_geometry %}
                     <strong>Тип сверла:</strong> {{ tool.drill_geometry.drill_type }}<br>
                     <strong>Диаметр:</strong> {{ tool.drill_geometry.diameter }} мм<br>
                     <strong>Угол при вершине:</strong> {{ tool.drill_geometry.top_angle }}°<br>
