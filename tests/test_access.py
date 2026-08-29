@@ -30,6 +30,32 @@ def test_admin_can_open_user_management(client, app):
     assert client.get('/users').status_code == 200
 
 
+def test_login_displays_invalid_credentials_message(client, app):
+    app.config['AUTH_REQUIRED'] = True
+    with app.app_context():
+        create_user('admin', 'admin-password', 'admin')
+
+    response = client.post('/login', data={'username': 'admin', 'password': 'wrong-password'}, follow_redirects=True)
+
+    assert 'Неверный логин или пароль.'.encode() in response.data
+
+
+def test_admin_can_delete_writer(client, app):
+    app.config['AUTH_REQUIRED'] = True
+    with app.app_context():
+        create_user('admin', 'admin-password', 'admin')
+        writer = create_user('writer', 'writer-password', 'writer')
+        writer_id = writer.id
+
+    client.post('/login', data={'username': 'admin', 'password': 'admin-password'})
+    response = client.post(f'/users/{writer_id}/delete', follow_redirects=True)
+
+    assert response.status_code == 200
+    assert 'Пользователь «writer» удалён.'.encode() in response.data
+    with app.app_context():
+        assert db.session.get(User, writer_id) is None
+
+
 def test_writer_can_add_tap(client, app):
     app.config['AUTH_REQUIRED'] = True
     with app.app_context():

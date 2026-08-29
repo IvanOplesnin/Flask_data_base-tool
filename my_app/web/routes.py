@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 
 from my_app.extensions import db
 from my_app.forms import MaterialForm, CoatingForm, MillingGeometryForm, TurningGeometryForm, DrillGeometryForm, \
-    ExperimentForm, LoginForm, TapForm, ToolForm, UserForm
+    DeleteUserForm, ExperimentForm, LoginForm, TapForm, ToolForm, UserForm
 from my_app.models import Material, Tool, Coating, Experiment, RecommendationParameter, Adhesive, Coefficient, \
     MaterialType, MillingGeometry, WearMeasurement, DrillGeometry, TurningGeometry, Insert, TapGeometry, User
 from my_app.security import roles_required
@@ -57,7 +57,33 @@ def users():
             db.session.commit()
             flash('Пользователь создан.', 'success')
             return redirect(url_for('web.users'))
-    return render_template('users.html', form=form, users=db.session.scalars(db.select(User).order_by(User.username)).all())
+    return render_template(
+        'users.html',
+        form=form,
+        delete_form=DeleteUserForm(),
+        users=db.session.scalars(db.select(User).order_by(User.username)).all(),
+    )
+
+
+@web_bp.route('/users/<int:user_id>/delete', methods=['POST'])
+@roles_required('admin')
+def delete_writer(user_id):
+    """Удаляет пользователя с ролью «Писатель» после подтверждения формы."""
+    form = DeleteUserForm()
+    if not form.validate_on_submit():
+        flash('Не удалось подтвердить удаление пользователя.', 'danger')
+        return redirect(url_for('web.users'))
+
+    user = db.get_or_404(User, user_id)
+    if user.role != 'writer':
+        flash('Удалять можно только пользователей с ролью «Писатель».', 'warning')
+        return redirect(url_for('web.users'))
+
+    username = user.username
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'Пользователь «{username}» удалён.', 'success')
+    return redirect(url_for('web.users'))
 
 
 @web_bp.route('/processing/<processing_type>')

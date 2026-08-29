@@ -10,6 +10,53 @@
         <div class="col-md-2">{{ form.role(class='form-select') }}</div>
         <div class="col-md-2">{{ form.submit(class='btn btn-primary') }}</div>
     </form>
-    <table class="table"><thead><tr><th>Логин</th><th>Роль</th></tr></thead><tbody>{% for user in users %}<tr><td>{{ user.username }}</td><td>{{ user.role }}</td></tr>{% endfor %}</tbody></table>
+    <table class="table">
+        <thead><tr><th>Логин</th><th>Роль</th><th>Действия</th></tr></thead>
+        <tbody>
+        {% for user in users %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.role }}</td>
+                <td>
+                    {% if user.role == 'writer' %}
+                        <button type="button" class="btn btn-outline-danger btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#deleteWriterModal"
+                                data-delete-url="{{ url_for('web.delete_writer', user_id=user.id) }}"
+                                data-username="{{ user.username }}">Удалить</button>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="modal fade" id="deleteWriterModal" tabindex="-1" aria-labelledby="deleteWriterModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form method="post" id="deleteWriterForm" class="modal-content">
+                {{ delete_form.hidden_tag() }}
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="deleteWriterModalLabel">Удаление пользователя</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    Вы уверены, что хотите удалить пользователя <strong id="deleteWriterUsername"></strong>?
+                    Это действие нельзя отменить.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    {{ delete_form.submit(class='btn btn-danger') }}
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+      document.getElementById('deleteWriterModal').addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        document.getElementById('deleteWriterForm').action = button.dataset.deleteUrl;
+        document.getElementById('deleteWriterUsername').textContent = button.dataset.username;
+      });
+    </script>
 </main>
 {% endblock %}

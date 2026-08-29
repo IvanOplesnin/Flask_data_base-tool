@@ -134,8 +134,8 @@ class ExperimentForm(FlaskForm):
 
 
 class LoginForm(FlaskForm):
-    username = StringField('Логин', validators=[DataRequired()])
-    password = PasswordField('Пароль', validators=[DataRequired()])
+    username = StringField('Логин', validators=[DataRequired(message='Введите логин.')])
+    password = PasswordField('Пароль', validators=[DataRequired(message='Введите пароль.')])
     submit = SubmitField('Войти')
 
 
@@ -148,6 +148,12 @@ class UserForm(FlaskForm):
         ('reader', 'Читатель'),
     ], validators=[DataRequired()])
     submit = SubmitField('Создать пользователя')
+
+
+class DeleteUserForm(FlaskForm):
+    """Подтверждение удаления пользователя в интерфейсе администратора."""
+
+    submit = SubmitField('Удалить')
 
 
 class TapForm(FlaskForm):

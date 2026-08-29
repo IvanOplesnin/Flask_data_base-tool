@@ -11,9 +11,10 @@ from .forms import (
     LoginForm,
     UserForm,
     TapForm,
+    DeleteUserForm,
 )
 
 __all__ = [
     'CoatingForm', 'DrillGeometryForm', 'ExperimentForm', 'MaterialForm',
-    'LoginForm', 'MillingGeometryForm', 'TapForm', 'ToolForm', 'TurningGeometryForm', 'UserForm',
+    'DeleteUserForm', 'LoginForm', 'MillingGeometryForm', 'TapForm', 'ToolForm', 'TurningGeometryForm', 'UserForm',
 ]
