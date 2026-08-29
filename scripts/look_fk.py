@@ -1,8 +1,11 @@
 from sqlalchemy import inspect
-from my_app import db, app
-from my_app.models import Materials, Adhesive, Experiments, MaterialType
+from my_app import create_app
+from my_app.extensions import db
 
-inspector = inspect(Materials)
+app = create_app()
+from my_app.models import Material, Adhesive, Experiment, MaterialType
+
+inspector = inspect(Material)
 foreign_keys = inspector.relationships.items()
 for name, relation in foreign_keys:
     print(f"Имя связи: {name}")

@@ -27,7 +27,7 @@
         <a class="btn btn-primary" type="submit" href="/experiment/add">Добавить эксперимент</a>
     </div>
     <h1> Таблица материалов </h1>
-    <form method="get" action="{{ url_for('experiments_table') }}">
+    <form method="get" action="{{ url_for('web.experiments_table') }}">
         <div class="input-group mb-3">
             <input class="form-control" type="text" name="material" placeholder="Фильтр по материалу" value="{{ request_args.get('material', '') }}">
             <input class="form-control" type="text" name="coating" placeholder="Фильтр по покрытию" value="{{ request_args.get('coating', '') }}">

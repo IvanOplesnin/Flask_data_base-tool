@@ -4,7 +4,7 @@ from wtforms import StringField, FloatField, IntegerField, SubmitField, SelectFi
 from wtforms.validators import DataRequired, NumberRange, Optional
 from datetime import date
 
-from my_app.models import MaterialType, Materials, Coating, Tools
+from my_app.models import MaterialType, Material, Coating, Tool
 
 
 class MaterialForm(FlaskForm):
@@ -128,7 +128,7 @@ class ExperimentForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         FlaskForm.__init__(self, *args, **kwargs)
-        self.material_id.choices = [(mt.id, mt.name) for mt in Materials.query.all()]
-        self.tool_id.choices = [(t.id, t.name) for t in Tools.query.all()]
+        self.material_id.choices = [(mt.id, mt.name) for mt in Material.query.all()]
+        self.tool_id.choices = [(t.id, t.name) for t in Tool.query.all()]
         self.coating_id.choices = [(c.id, c.name) for c in Coating.query.all()]
 

@@ -1,24 +1,27 @@
-from flask import render_template, request, redirect, jsonify, flash, url_for, session
+from flask import Blueprint, jsonify, flash, redirect, render_template, request, session, url_for
 from sqlalchemy.orm import joinedload
 
-from my_app import app, db
+from my_app.extensions import db
 from my_app.forms import MaterialForm, CoatingForm, MillingGeometryForm, TurningGeometryForm, DrillGeometryForm, \
     ExperimentForm, ToolForm
-from my_app.models import Materials, Tools, Coating, Experiments, RecommendationParameters, Adhesive, Coefficients, \
-    MaterialType, MillingGeometry, WearTables, DrillGeometry, TurningGeometry, Insert
+from my_app.models import Material, Tool, Coating, Experiment, RecommendationParameter, Adhesive, Coefficient, \
+    MaterialType, MillingGeometry, WearMeasurement, DrillGeometry, TurningGeometry, Insert
+from my_app.services.calculations import calculate_cutting_parameters
+
+web_bp = Blueprint('web', __name__)
 
 
-@app.route('/')
+@web_bp.route('/')
 def select_parameters():
-    unique_materials = Materials.query.join(RecommendationParameters).distinct().all()
-    unique_tools = Tools.query.join(RecommendationParameters).distinct().all()
-    unique_coatings = Coating.query.join(RecommendationParameters).distinct().all()
+    unique_materials = Material.query.join(RecommendationParameter).distinct().all()
+    unique_tools = Tool.query.join(RecommendationParameter).distinct().all()
+    unique_coatings = Coating.query.join(RecommendationParameter).distinct().all()
 
     return render_template('home.html', unique_materials=unique_materials, unique_tools=unique_tools,
                            unique_coatings=unique_coatings)
 
 
-@app.route('/recommended_speed', methods=['POST', 'GET'])
+@web_bp.route('/recommended_speed', methods=['POST', 'GET'])
 def recommended_speed():
     # Получаем значения фильтров из параметров запроса
     material_id = request.args.get('material_id', type=int)
@@ -26,15 +29,15 @@ def recommended_speed():
     tool_id = request.args.get('tool_id', type=int)
 
     # Получаем списки для выпадающих списков
-    materials = Materials.query.join(RecommendationParameters).distinct().all()
-    coatings = Coating.query.join(RecommendationParameters).distinct().all()
-    tools = Tools.query.join(RecommendationParameters).distinct().all()
+    materials = Material.query.join(RecommendationParameter).distinct().all()
+    coatings = Coating.query.join(RecommendationParameter).distinct().all()
+    tools = Tool.query.join(RecommendationParameter).distinct().all()
 
     # Формируем запрос с учетом фильтров
-    query = RecommendationParameters.query.options(
-        joinedload(RecommendationParameters.material),
-        joinedload(RecommendationParameters.tool),
-        joinedload(RecommendationParameters.coating))
+    query = RecommendationParameter.query.options(
+        joinedload(RecommendationParameter.material),
+        joinedload(RecommendationParameter.tool),
+        joinedload(RecommendationParameter.coating))
     if material_id:
         query = query.filter_by(material_id=material_id)
     if coating_id:
@@ -42,10 +45,10 @@ def recommended_speed():
     if tool_id:
         query = query.filter_by(tool_id=tool_id)
 
-    recomended_speed = query.all()
+    recommendations = query.all()
 
     return render_template('recommend_speed.html',
-                           recomended_speed=recomended_speed,
+                           recommendations=recommendations,
                            materials=materials,
                            coatings=coatings,
                            tools=tools,
@@ -54,7 +57,7 @@ def recommended_speed():
                            selected_tool_id=tool_id)
 
 
-@app.route('/add', methods=['POST', 'GET'])
+@web_bp.route('/add', methods=['POST', 'GET'])
 def add():
     material_form = MaterialForm()
     coating_form = CoatingForm()
@@ -82,7 +85,7 @@ def add():
                     render_template('add.html', material_form=material_form, coating_form=coating_form,
                                     tool_form=milling_geometry_form)
 
-                new_material = Materials(
+                new_material = Material(
                     name=material_form.name.data,
                     prop_physics=material_form.prop_physics.data,
                     structure=material_form.structure.data,
@@ -111,7 +114,7 @@ def add():
 
             if milling_geometry_form.submit.data:
                 if milling_geometry_form.validate_on_submit():
-                    new_tool = Tools(
+                    new_tool = Tool(
                         name=milling_geometry_form.name.data,
                         name_easy=milling_geometry_form.name_easy.data,
                         tool_type=milling_geometry_form.tool_type,
@@ -139,7 +142,7 @@ def add():
                     flash('Исправьте ошибки в форме фрезы.', 'danger')
 
             if turning_form.submit.data and turning_form.validate_on_submit():
-                new_tool = Tools(
+                new_tool = Tool(
                     name=turning_form.name.data,
                     name_easy=turning_form.name_easy.data,
                     tool_type=turning_form.tool_type,
@@ -161,7 +164,7 @@ def add():
                 return redirect('/add')
 
             if drill_form.submit.data and drill_form.validate_on_submit():
-                new_tool = Tools(
+                new_tool = Tool(
                     name=drill_form.name.data,
                     name_easy=drill_form.name_easy.data,
                     tool_type=drill_form.tool_type,
@@ -192,7 +195,7 @@ def add():
                            drill_form=drill_form)
 
 
-@app.route('/materials', methods=['GET', 'POST'])
+@web_bp.route('/materials', methods=['GET', 'POST'])
 def materials_table():
     # Получаем все типы материалов для выпадающего списка
     material_types = MaterialType.query.all()
@@ -202,7 +205,7 @@ def materials_table():
     search_query = request.args.get('search_query', '')
 
     # Базовый запрос
-    materials_query = Materials.query
+    materials_query = Material.query
 
     # Фильтрация по типу материала, если выбран
     if selected_type_id and selected_type_id != 'all':
@@ -210,21 +213,21 @@ def materials_table():
 
     # Поиск по названию материала
     if search_query:
-        materials_query = materials_query.filter(Materials.name.ilike(f'%{search_query}%'))
+        materials_query = materials_query.filter(Material.name.ilike(f'%{search_query}%'))
 
     # Получаем отсортированный список материалов
-    materials = materials_query.order_by(Materials.name).all()
+    materials = materials_query.order_by(Material.name).all()
 
     return render_template('materials.html', materials=materials, material_types=material_types,
                            selected_type_id=selected_type_id, search_query=search_query)
 
 
-@app.route('/materials/search')
+@web_bp.route('/materials/search')
 def search_materials():
     search_query = request.args.get('search_query', '')
     type_id = request.args.get('type_id', 'all')
 
-    materials = Materials.query
+    materials = Material.query
     # Ищем материалы, соответствующие запросу
     if type_id != 'all':
         materials = materials.filter_by(type_id=type_id)
@@ -246,16 +249,16 @@ def search_materials():
     return jsonify(materials_list)
 
 
-@app.route('/materials/by_type/<int:type_id>')
+@web_bp.route('/materials/by_type/<int:type_id>')
 def get_materials_by_type(type_id):
     # Получаем материалы, соответствующие выбранному типу
-    materials = Materials.query.filter_by(type_id=type_id).all()
+    materials = Material.query.filter_by(type_id=type_id).all()
     # Преобразуем материалы в список словарей
     materials_list = [{'id': material.id, 'name': material.name} for material in materials]
     return jsonify(materials_list)
 
 
-@app.route('/calculate')
+@web_bp.route('/calculate')
 def calculate():
     cutting_speed_value = request.args.get('cutting_speed', '0')
     try:
@@ -277,7 +280,7 @@ def calculate():
     coating_id = request.args.get('coating_id')
 
     # Получаем коэффициенты из базы данных
-    coefficient = Coefficients.query.filter_by(
+    coefficient = Coefficient.query.filter_by(
         material_id=material_id,
         tool_id=tool_id,
         coating_id=coating_id
@@ -291,46 +294,36 @@ def calculate():
             'tool_life': 0
         })
 
-    # Показатели степени (известны и фиксированы)
-    a_force = -0.12
-    b_force = 0.95
-    a_temp = 0.4
-    b_temp = 0.24
-    a_life = -0.2
-    b_life = -0.15
-
-    # Расчет силы резания
-    cutting_force = coefficient.cutting_force_coefficient * (cutting_speed ** a_force) * (feed_per_tooth ** b_force)
-
-    # Расчет температуры резания
-    cutting_temperature = coefficient.cutting_temperature_coefficient * (cutting_speed ** a_temp) * (
-            feed_per_tooth ** b_temp)
-
-    # Расчет стойкости инструмента
-    tool_life = coefficient.durability_coefficient * (cutting_speed ** a_life) * (feed_per_tooth ** b_life)
+    result = calculate_cutting_parameters(
+        force_coefficient=coefficient.cutting_force_coefficient,
+        temperature_coefficient=coefficient.cutting_temperature_coefficient,
+        durability_coefficient=coefficient.durability_coefficient,
+        cutting_speed=cutting_speed,
+        feed_per_tooth=feed_per_tooth,
+    )
 
     return jsonify({
-        'cutting_force': cutting_force,
-        'cutting_temperature': cutting_temperature,
-        'tool_life': tool_life
+        'cutting_force': result.cutting_force,
+        'cutting_temperature': result.cutting_temperature,
+        'tool_life': result.tool_life,
     })
 
 
-@app.route('/materials/<int:materaial_id>/delete')
-def delete_materials(materaial_id):
-    delete_str = Materials.query.get_or_404(materaial_id)
+@web_bp.route('/materials/<int:material_id>/delete')
+def delete_materials(material_id):
+    entity_to_delete = Material.query.get_or_404(material_id)
     try:
-        db.session.delete(delete_str)
+        db.session.delete(entity_to_delete)
         db.session.commit()
         return redirect('/materials')
     except Exception:
         return 'Ошибка при удалении'
 
 
-@app.route('/materials/<int:material_id>/update', methods=['GET', 'POST'])
+@web_bp.route('/materials/<int:material_id>/update', methods=['GET', 'POST'])
 def materials_update(material_id):
     material_form = MaterialForm()
-    material = Materials.query.get_or_404(material_id)
+    material = Material.query.get_or_404(material_id)
     if request.method == 'POST':
         try:
             if material_form.submit.data and material_form.validate_on_submit():
@@ -370,13 +363,13 @@ def materials_update(material_id):
                            material_form=material_form)
 
 
-@app.route("/material/<int:material_id>/info")
+@web_bp.route("/material/<int:material_id>/info")
 def mat_info(material_id):
-    material = Materials.query.get_or_404(material_id)
+    material = Material.query.get_or_404(material_id)
     return render_template('mat_info.html', material=material)
 
 
-@app.route('/coatings')
+@web_bp.route('/coatings')
 def coatings():
     search_query = request.args.get('search_query', '')
     coatings = Coating.query.order_by(Coating.name)
@@ -387,18 +380,18 @@ def coatings():
     return render_template('coating.html', coatings=coatings, search_query=search_query)
 
 
-@app.route('/coating/<int:coating_id>/delete')
+@web_bp.route('/coating/<int:coating_id>/delete')
 def delete_coating(coating_id):
-    delete_str = Coating.query.get_or_404(coating_id)
+    entity_to_delete = Coating.query.get_or_404(coating_id)
     try:
-        db.session.delete(delete_str)
+        db.session.delete(entity_to_delete)
         db.session.commit()
         return redirect('/coatings')
     except:
         return 'Ошибка при удалении'
 
 
-@app.route('/coating/<int:coating_id>/update', methods=['GET', 'POST'])
+@web_bp.route('/coating/<int:coating_id>/update', methods=['GET', 'POST'])
 def coating_update(coating_id):
     coating = Coating.query.get(coating_id)
     coating_form = CoatingForm()
@@ -423,28 +416,28 @@ def coating_update(coating_id):
     return render_template('coating_update.html', coating=coating, coating_form=coating_form)
 
 
-@app.route("/coating/<int:coating_id>/info")
+@web_bp.route("/coating/<int:coating_id>/info")
 def coat_info(coating_id):
     coating = Coating.query.get_or_404(coating_id)
     return render_template('coat_info.html', coating=coating)
 
 
-@app.route('/tools')
+@web_bp.route('/tools')
 def tools():
     # Получаем параметры запроса
     tool_type = request.args.get('tool_type', 'all')
     search_query = request.args.get('search_query', '')
 
     # Оптимизация запроса с подгрузкой связанных геометрий
-    query = Tools.query.options(
-        db.joinedload(Tools.milling_geometry),
-        db.joinedload(Tools.turning_geometry),
-        db.joinedload(Tools.drill_geometry)
+    query = Tool.query.options(
+        db.joinedload(Tool.milling_geometry),
+        db.joinedload(Tool.turning_geometry),
+        db.joinedload(Tool.drill_geometry)
     )
 
     # Фильтрация по типу инструмента
     if tool_type != 'all':
-        query = query.filter(Tools.tool_type == tool_type)
+        query = query.filter(Tool.tool_type == tool_type)
 
     # Поиск по названию
     if search_query:
@@ -455,15 +448,15 @@ def tools():
     return render_template('tools.html', tools=tools, selected_tool_type=tool_type, search_query=search_query)
 
 
-@app.route('/tool/<int:tool_id>/delete')
+@web_bp.route('/tool/<int:tool_id>/delete')
 def delete_tool(tool_id):
-    delete_str = Tools.query.get_or_404(tool_id)
-    tool_geometry = [getattr(delete_str, 'milling_geometry'),
-                     getattr(delete_str, 'turning_geometry'),
-                     getattr(delete_str, 'drill_geometry')]
+    entity_to_delete = Tool.query.get_or_404(tool_id)
+    tool_geometry = [getattr(entity_to_delete, 'milling_geometry'),
+                     getattr(entity_to_delete, 'turning_geometry'),
+                     getattr(entity_to_delete, 'drill_geometry')]
 
     try:
-        db.session.delete(delete_str)
+        db.session.delete(entity_to_delete)
         for geom in tool_geometry:
             if geom:
                 db.session.delete(geom)
@@ -473,9 +466,9 @@ def delete_tool(tool_id):
         return 'Ошибка при удалении'
 
 
-@app.route('/tool/<int:tool_id>/update', methods=['GET', 'POST'])
+@web_bp.route('/tool/<int:tool_id>/update', methods=['GET', 'POST'])
 def tool_update(tool_id):
-    tool = Tools.query.get_or_404(tool_id)
+    tool = Tool.query.get_or_404(tool_id)
 
     # Определяем, какую форму использовать в зависимости от типа инструмента
     if tool.tool_type == 'milling':
@@ -562,7 +555,7 @@ def tool_update(tool_id):
         try:
             db.session.commit()
             flash('Инструмент успешно обновлен!', 'success')
-            return redirect(url_for('tools'))
+            return redirect(url_for('web.tools'))
         except Exception as e:
             db.session.rollback()
             flash(f'Ошибка при обновлении инструмента: {e}', 'danger')
@@ -573,13 +566,13 @@ def tool_update(tool_id):
     return render_template('tool_update.html', form=form, tool=tool)
 
 
-@app.route("/tool/<int:tool_id>/info")
+@web_bp.route("/tool/<int:tool_id>/info")
 def tools_info(tool_id):
-    tool = Tools.query.get_or_404(tool_id)
+    tool = Tool.query.get_or_404(tool_id)
     return render_template('tool_info.html', tool=tool)
 
 
-@app.route('/experiments')
+@web_bp.route('/experiments')
 def experiments_table():
     material_filter = request.args.get('material', '')
     coating_filter = request.args.get('coating', '')
@@ -590,8 +583,8 @@ def experiments_table():
     sort_by = request.args.get('sort_by')
     order = request.args.get('order', 'asc')
 
-    experiments_query = Experiments.query.options(joinedload(Experiments.material), joinedload(Experiments.coating),
-                                                  joinedload(Experiments.tool)).all()
+    experiments_query = Experiment.query.options(joinedload(Experiment.material), joinedload(Experiment.coating),
+                                                  joinedload(Experiment.tool)).all()
 
     # Фильтрация уже в Python
     if material_filter:
@@ -624,10 +617,10 @@ def experiments_table():
                            request_args=request.args)
 
 
-@app.route('/experiments/<int:experiment_id>/delete')
+@web_bp.route('/experiments/<int:experiment_id>/delete')
 def delete_experiment(experiment_id):
-    experiment: Experiments = Experiments.query.get_or_404(experiment_id)
-    wear_table: list[WearTables] = WearTables.query.filter_by(experiment_id=experiment_id).all()
+    experiment: Experiment = Experiment.query.get_or_404(experiment_id)
+    wear_table: list[WearMeasurement] = WearMeasurement.query.filter_by(experiment_id=experiment_id).all()
     for row in wear_table:
         db.session.delete(row)
     db.session.delete(experiment)
@@ -638,16 +631,16 @@ def delete_experiment(experiment_id):
         return f'Ошибка {e} при удалении эксперимента'
 
 
-@app.route('/experiment/add', methods=['GET', 'POST'])
+@web_bp.route('/experiment/add', methods=['GET', 'POST'])
 def add_experiment():
     form = ExperimentForm()
     if request.method == 'POST':
-        total_enries = len([key for key in request.form.keys() if 'wear_data-' in key and '-length' in key])
-        form.wear_data.min_entries = total_enries
+        wear_entry_count = len([key for key in request.form.keys() if 'wear_data-' in key and '-length' in key])
+        form.wear_data.min_entries = wear_entry_count
         form = ExperimentForm(request.form)
 
         if form.validate():
-            new_experiment = Experiments(
+            new_experiment = Experiment(
                 material_id=form.material_id.data,
                 tool_id=form.tool_id.data,
                 coating_id=form.coating_id.data,
@@ -662,7 +655,7 @@ def add_experiment():
             db.session.add(new_experiment)
             db.session.flush()
             for wear_form in form.wear_data.entries:
-                wear_entry = WearTables(
+                wear_entry = WearMeasurement(
                     experiment_id=new_experiment.id,
                     length=wear_form.form.length.data,
                     wear=wear_form.form.wear.data
@@ -671,23 +664,23 @@ def add_experiment():
             db.session.commit()
 
             flash(f'Добавлен новый эксперимент: Номер - {new_experiment.id}', 'success')
-            return redirect(url_for('experiments_info', experiment_id=new_experiment.id))
+            return redirect(url_for('web.experiments_info', experiment_id=new_experiment.id))
         else:
             print(form.errors)
     return render_template('add_experiment.html', form=form)
 
 
-@app.route("/experiments/<int:experiment_id>/info")
+@web_bp.route("/experiments/<int:experiment_id>/info")
 def experiments_info(experiment_id):
-    experiment = Experiments.query.get_or_404(experiment_id)
+    experiment = Experiment.query.get_or_404(experiment_id)
     return render_template('experiment_info.html', experiment=experiment)
 
 
-@app.route("/adhesive")
+@web_bp.route("/adhesive")
 def adhesive():
-    uniq_material = Materials.query.join(Adhesive).distinct().all()
-    uniq_coating = Coating.query.join(Adhesive).distinct().all()
-    uniq_temperature = Adhesive.query.with_entities(Adhesive.temperature).distinct().all()
+    materials_with_adhesion = Material.query.join(Adhesive).distinct().all()
+    coatings_with_adhesion = Coating.query.join(Adhesive).distinct().all()
+    available_temperatures = Adhesive.query.with_entities(Adhesive.temperature).distinct().all()
 
     selected_material = request.args.get('material_id')
     selected_coating = request.args.get('coating_id')
@@ -717,18 +710,18 @@ def adhesive():
 
     return render_template('adhesive.html',
                            adhesive=adhesive_table,
-                           materials=uniq_material,
-                           coatings=uniq_coating,
-                           uniq_temperature=uniq_temperature,
+                           materials=materials_with_adhesion,
+                           coatings=coatings_with_adhesion,
+                           available_temperatures=available_temperatures,
                            selected_temperature=selected_temperature,
                            selected_coating=selected_coating,
                            selected_material=selected_material)
 
 
-@app.route("/expected_parameters", methods=['GET', 'POST'])
+@web_bp.route("/expected_parameters", methods=['GET', 'POST'])
 def expected_parameters():
-    materials = Materials.query.all()
-    tools = Tools.query.all()
+    materials = Material.query.all()
+    tools = Tool.query.all()
     coatings = Coating.query.all()
     material_types = MaterialType.query.all()
 
@@ -750,7 +743,7 @@ def expected_parameters():
     )
 
 
-@app.route('/update_graph_data', methods=['POST'])
+@web_bp.route('/update_graph_data', methods=['POST'])
 def update_graph_data():
     data = request.get_json(silent=True) or {}
     try:
@@ -760,7 +753,7 @@ def update_graph_data():
     except (KeyError, TypeError, ValueError):
         return jsonify(status='error', error='material_id, tool_id и coating_id должны быть целыми числами'), 400
 
-    tool = Tools.query.get(tool_id)
+    tool = Tool.query.get(tool_id)
     if not tool or not tool.milling_geometry:
         return jsonify(status='error', error='Для расчёта требуется существующая фреза с геометрией'), 400
     diameter = tool.milling_geometry.diameter
@@ -768,7 +761,7 @@ def update_graph_data():
     if not diameter or diameter <= 0 or not count_of_teeth or count_of_teeth <= 0:
         return jsonify(status='error', error='Диаметр и число зубьев должны быть больше нуля'), 400
 
-    coefficient: Coefficients = Coefficients.query.filter_by(
+    coefficient: Coefficient = Coefficient.query.filter_by(
         material_id=material_id,
         tool_id=tool_id,
         coating_id=coating_id
@@ -789,7 +782,7 @@ def update_graph_data():
         }
 
     # Получаем рекомендуемые режимы резания
-    recommended = RecommendationParameters.query.filter_by(
+    recommended = RecommendationParameter.query.filter_by(
         material_id=material_id,
         tool_id=tool_id,
         coating_id=coating_id

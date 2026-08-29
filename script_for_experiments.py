@@ -1,14 +1,17 @@
 import random
 
-from my_app import app, db
-from my_app.models import Experiments, WearTables
+from my_app import create_app
+from my_app.extensions import db
+
+app = create_app()
+from my_app.models import Experiment, WearMeasurement
 
 app.app_context().push()
 
-exp_s: list[Experiments] = Experiments.query.all()
+exp_s: list[Experiment] = Experiment.query.all()
 
 
-def add_wear_table(experiment: Experiments):
+def add_wear_table(experiment: Experiment):
     step_length = experiment.length_path / 10
     x = [0]
     x.extend([x * step_length for x in range(1, 11)])
@@ -25,7 +28,7 @@ def add_wear_table(experiment: Experiments):
 
     new_table = list(zip(x, y))
     for length, wear in new_table:
-        wear_table = WearTables(
+        wear_table = WearMeasurement(
             length=length,
             wear=wear,
             experiment_id=experiment.id
@@ -37,7 +40,7 @@ def add_wear_table(experiment: Experiments):
 for experiment in exp_s:
     add_wear_table(experiment)
 
-# wear_table = WearTables.query.all()
+# wear_table = WearMeasurement.query.all()
 # for i in wear_table:
 #     db.session.delete(i)
 # db.session.commit()

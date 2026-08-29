@@ -4,12 +4,15 @@ import pandas as pd
 from sqlalchemy.orm import joinedload
 
 
-from my_app import app, db
-from my_app.models import RecommendationParameters, Materials, Coating, Tools
+from my_app import create_app
+from my_app.extensions import db
+
+app = create_app()
+from my_app.models import RecommendationParameter, Material, Coating, Tool
 
 app.app_context().push()
 
-# reccommendation_parameters = RecommendationParameters.query.all()
+# reccommendation_parameters = RecommendationParameter.query.all()
 # for i in reccommendation_parameters:
 #     db.session.delete(i)
 #
@@ -21,7 +24,7 @@ for key, df in dict_df.items():
     for row in df.index:
         coating: str = df.iloc[row, 0]
         tool = 'Фреза 6157-7005'
-        material_id = Materials.query.filter_by(name=material).first().id
+        material_id = Material.query.filter_by(name=material).first().id
         # try:
         #     if 'AlTiC' in coating:
         #         coating = coating.replace(coating, 'AlTiCrN3') if '+' not in coating else coating
@@ -34,11 +37,11 @@ for key, df in dict_df.items():
         # except AttributeError as e:
         #     print(coating)
 
-        tool: Tools = Tools.query.filter_by(name=tool).first()
+        tool: Tool = Tool.query.filter_by(name=tool).first()
         tool_id = tool.id
         spindle_speed = (df.iloc[row, -1]*1000)/(math.pi*tool.milling_geometry.diameter)
         feed_table = df.iloc[row, 4]*4*spindle_speed
-        recommendation_parameters = RecommendationParameters(
+        recommendation_parameters = RecommendationParameter(
             material_id=material_id,
             coating_id=coating_id,
             tool_id=tool_id,

@@ -2,8 +2,11 @@ import datetime
 
 import pandas as pd
 
-from my_app import app, db
-from my_app.models import Coating, Experiments, WearTables
+from my_app import create_app
+from my_app.extensions import db
+
+app = create_app()
+from my_app.models import Coating, Experiment, WearMeasurement
 
 app.app_context().push()
 
@@ -14,7 +17,7 @@ x = df['l, м'] * 1000
 material = 'ВТ3-1'
 tool_id = 1
 material_id = 5
-# materials = Materials.query.all()
+# materials = Material.query.all()
 # for materials in materials:
 #     print(materials.name, '-', materials.id)
 
@@ -34,7 +37,7 @@ material_id = 5
 #               list(filter(lambda x: x[1] < 0.3, points))[-1][1])
 #     y2 = 0.3
 #     x2 = x0 + (x1 - x0) * (y2 - y0) / (y1 - y0)
-#     new_experiment = Experiments(
+#     new_experiment = Experiment(
 #         material_id=material_id,
 #         coating_id=coating_id,
 #         tool_id=tool_id,
@@ -52,7 +55,7 @@ material_id = 5
 #     for point in points:
 #         length = point[0]
 #         wear = point[1]
-#         new_wear_table = WearTables(
+#         new_wear_table = WearMeasurement(
 #             experiment_id=experiment_id,
 #             length=length,
 #             wear=wear
@@ -61,9 +64,9 @@ material_id = 5
 #
 # db.session.commit()
 
-# experiments = Experiments.query.filter_by(material_id=5).all()
+# experiments = Experiment.query.filter_by(material_id=5).all()
 # for j in experiments:
-#     wear_tables = WearTables.query.filter_by(experiment_id=j.id).all()
+#     wear_tables = WearMeasurement.query.filter_by(experiment_id=j.id).all()
 #     for i in wear_tables:
 #         db.session.delete(i)
 #     db.session.delete(j)
@@ -90,7 +93,7 @@ for columns in df.columns[1:]:
               list(filter(lambda x: x[1] < 0.3, points))[-1][1])
     y2 = 0.3
     x2 = x0 + (x1 - x0) * (y2 - y0) / (y1 - y0)
-    new_experiment = Experiments(
+    new_experiment = Experiment(
         material_id=material_id,
         coating_id=coating_id,
         tool_id=tool_id,
@@ -109,7 +112,7 @@ for columns in df.columns[1:]:
     for point in points:
         length = point[0]
         wear = point[1]
-        new_wear_table = WearTables(
+        new_wear_table = WearMeasurement(
             experiment_id=experiment_id,
             length=length,
             wear=wear
