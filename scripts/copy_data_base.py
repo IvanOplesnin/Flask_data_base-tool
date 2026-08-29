@@ -1,9 +1,12 @@
 from sqlalchemy import create_engine
 import pandas as pd
 
-from my_app import app, db
-from my_app.models import MaterialType, Materials, Coating, Adhesive, Tools, MillingGeometry, \
-    RecommendationParameters, Coefficients, Experiments, CsvFiles
+from my_app import create_app
+from my_app.extensions import db
+
+app = create_app()
+from my_app.models import MaterialType, Material, Coating, Adhesive, Tool, MillingGeometry, \
+    RecommendationParameter, Coefficient, Experiment, CsvFile
 
 app.app_context().push()  # this is needed to make the app context available to the views
 
@@ -21,7 +24,7 @@ engine = create_engine('sqlite:///C:/Users/aples/PycharmProjects/Flask_data_base
 # print(material.columns)
 #
 # for i in material.index:
-#     new_material = Materials(
+#     new_material = Material(
 #         name=material.loc[i, "Name"],
 #         prop_physics=material.loc[i, "PropPhysics"],
 #         structure=material.loc[i, "Structure"],
@@ -56,7 +59,7 @@ engine = create_engine('sqlite:///C:/Users/aples/PycharmProjects/Flask_data_base
 #
 #
 # for i in adhesive.index:
-#     material_id = Materials.query.filter(Materials.name.ilike(f'%{adhesive.loc[i, "material"]}%')).first().id
+#     material_id = Material.query.filter(Material.name.ilike(f'%{adhesive.loc[i, "material"]}%')).first().id
 #     try:
 #         adhesive.loc[i, "coating"] = adhesive.loc[i, "coating"].replace('AlTiСrN3', 'AlTiCrN3').replace(' +', '+')
 #         coating_id = Coating.query.filter_by(name=adhesive.loc[i, "coating"]).first().id
@@ -80,7 +83,7 @@ engine = create_engine('sqlite:///C:/Users/aples/PycharmProjects/Flask_data_base
 #
 # for i in tools.index:
 #     if len(tools.loc[i, "Name"]) > 10:
-#         new_tool = Tools(
+#         new_tool = Tool(
 #             name=tools.loc[i, "Name"],
 #             name_easy=f'Фреза {tools.loc[i, "Diameter"]:.0f} мм',
 #             tool_type='milling',
@@ -104,7 +107,7 @@ engine = create_engine('sqlite:///C:/Users/aples/PycharmProjects/Flask_data_base
 #
 # db.session.commit()
 
-# tools = Tools.query.all()
+# tools = Tool.query.all()
 # for tool in tools:
 #     milling_geometry = MillingGeometry.query.filter_by(tool_id=tool.id).first()
 #     db.session.delete(tool)
@@ -117,7 +120,7 @@ recommendation_parameters = pd.read_sql_query("SELECT * FROM recomeded_speed", e
 #     coating_id = Coating.query.filter_by(name=i).first().id
 #
 # for i in set(recommendation_parameters['Material']):
-#     material_id = Materials.query.filter_by(name=i).first().id
+#     material_id = Material.query.filter_by(name=i).first().id
 
 
 tools_dict = {
@@ -127,16 +130,16 @@ tools_dict = {
 
 # for i in set(recommendation_parameters['Tool']):
 #     if i in tools_dict:
-#         tool = Tools.query.filter_by(name=tools_dict[i]).first()
+#         tool = Tool.query.filter_by(name=tools_dict[i]).first()
 #         print(tool.id, tool.name)
 
 
 for i in recommendation_parameters.index:
     if recommendation_parameters.loc[i, "Tool"] in tools_dict:
-        material_id = Materials.query.filter_by(name=recommendation_parameters.loc[i, "Material"]).first().id
+        material_id = Material.query.filter_by(name=recommendation_parameters.loc[i, "Material"]).first().id
         coating_id = Coating.query.filter_by(name=recommendation_parameters.loc[i, "Coating"]).first().id
-        tool_id = Tools.query.filter_by(name=tools_dict[recommendation_parameters.loc[i, "Tool"]]).first().id
-        new_recommendation_parameters = RecommendationParameters(
+        tool_id = Tool.query.filter_by(name=tools_dict[recommendation_parameters.loc[i, "Tool"]]).first().id
+        new_recommendation_parameters = RecommendationParameter(
             material_id=material_id,
             coating_id=coating_id,
             tool_id=tool_id,
@@ -152,14 +155,14 @@ for i in recommendation_parameters.index:
 db.session.commit()
 
 
-# recommendation_parameters = RecommendationParameters.query.all()
+# recommendation_parameters = RecommendationParameter.query.all()
 # for recommendation_parameter in recommendation_parameters:
 #     db.session.delete(recommendation_parameter)
 #     db.session.commit()
 
-# coefficients = pd.read_sql_query("SELECT * FROM Coefficients", engine)
+# coefficients = pd.read_sql_query("SELECT * FROM Coefficient", engine)
 # for i in coefficients.index:
-#     new_coefficient = Coefficients(
+#     new_coefficient = Coefficient(
 #         material_id=int(coefficients.loc[i, "material_id"]),
 #         coating_id=int(coefficients.loc[i, "coating_id"]),
 #         tool_id=int(coefficients.loc[i, "tool_id"]),
@@ -175,7 +178,7 @@ db.session.commit()
 # print(csv_file.columns)
 #
 # for i in csv_file.index:
-#     new_csv_file = CsvFiles(
+#     new_csv_file = CsvFile(
 #         filename_strength=csv_file.loc[i, "filename_strengh"],
 #         filename_temperature=csv_file.loc[i, "filename_temrature"],
 #         path=csv_file.loc[i, "path"],
@@ -186,17 +189,17 @@ db.session.commit()
 #     db.session.commit()
 
 
-# experimnts = pd.read_sql_query("SELECT * FROM Experiments", engine)
+# experimnts = pd.read_sql_query("SELECT * FROM Experiment", engine)
 # print(experimnts.columns)
 # for i in experimnts.index:
-#     material_id = Materials.query.filter_by(name=experimnts.loc[i, "Material"]).first().id
+#     material_id = Material.query.filter_by(name=experimnts.loc[i, "Material"]).first().id
 #     try:
 #         coating_id = Coating.query.filter_by(
 #             name=experimnts.loc[i, "Coating"].replace('AlTiNCrN3', 'AlTiCrN3')).first().id
 #     except:
 #         raise ValueError(f'{experimnts.loc[i, "Coating"]}')
-#     tool_id = Tools.query.filter_by(name=experimnts.loc[i, "Tool"]).first().id
-#     new_experiment = Experiments(
+#     tool_id = Tool.query.filter_by(name=experimnts.loc[i, "Tool"]).first().id
+#     new_experiment = Experiment(
 #         material_id=material_id,
 #         coating_id=coating_id,
 #         tool_id=tool_id,
@@ -211,7 +214,7 @@ db.session.commit()
 #     db.session.add(new_experiment)
 # db.session.commit()
 
-# experiments = Experiments.query.all()
+# experiments = Experiment.query.all()
 # for experiment in experiments:
 #     db.session.delete(experiment)
 #     db.session.commit()

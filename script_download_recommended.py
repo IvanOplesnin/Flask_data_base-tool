@@ -1,9 +1,12 @@
-from my_app import app, db
-from my_app.models import RecommendationParameters
+from my_app import create_app
+from my_app.extensions import db
+
+app = create_app()
+from my_app.models import RecommendationParameter
 import pandas as pd
 
 with app.app_context():
-    data: list[RecommendationParameters] = RecommendationParameters.query.all()
+    data: list[RecommendationParameter] = RecommendationParameter.query.all()
 
     data_list = []
     for row in data:

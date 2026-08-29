@@ -1,8 +1,11 @@
 import os
 from typing import Any
 import json
-from my_app import db, app
-from my_app.models import CsvFiles, Experiments, RecommendationParameters, Materials, Tools, Coating, Coefficients, \
+from my_app import create_app
+from my_app.extensions import db
+
+app = create_app()
+from my_app.models import CsvFile, Experiment, RecommendationParameter, Material, Tool, Coating, Coefficient, \
     MaterialType
 # import pandas as pd
 # import matplotlib.pyplot as plt
@@ -48,14 +51,14 @@ app.app_context().push()
 #
 #
 # for key, values in final_dict.items():
-#     material_id = Materials.query.filter_by(name=key.split(', ')[0].strip()).first().id
+#     material_id = Material.query.filter_by(name=key.split(', ')[0].strip()).first().id
 #     coating_id = coating.query.filter_by(name=key.split(', ')[1].strip()).first().id
-#     tooldate_id = Tools.query.filter_by(name=key.split(', ')[2].strip()).first().id
+#     tooldate_id = Tool.query.filter_by(name=key.split(', ')[2].strip()).first().id
 #     force_coefficient = values['Силы']
 #     temperature_coefficient = values['Температура']
 #     durability_coefficient = random.randint(60, 100)
 #     try:
-#         coefficient = Coefficients(material_id=material_id,
+#         coefficient = Coefficient(material_id=material_id,
 #                                    coating_id=coating_id,
 #                                    tool_id=tooldate_id,
 #                                    cutting_force_coefficient=force_coefficient,
@@ -68,13 +71,16 @@ app.app_context().push()
 #         print(material_id, coating_id, tooldate_id, ' - ', 'уже существуют в базе данных')
 #
 # #
-# all_coefficient = Coefficients.query.all()
+# all_coefficient = Coefficient.query.all()
 # for coef in all_coefficient:
 #     print(coef)
     # db.session.delete(coef)
     # db.session.commit()
 
-from my_app import db, app
+from my_app import create_app
+from my_app.extensions import db
+
+app = create_app()
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -88,7 +94,7 @@ from sqlalchemy import text
 # inspector = inspect(db.engine)
 # print(inspector.get_table_names())
 
-# materials = Materials.query.all()
+# materials = Material.query.all()
 # try:
 #     for material in materials:
 #         if 'ВТ' in material.name:

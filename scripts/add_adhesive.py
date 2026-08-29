@@ -1,5 +1,5 @@
 from my_app import db,app
-from my_app.models import Csv_Files, Experiments, RecomededSpeed, Material,Toolsdate,Coating, Adhesive
+from my_app.models import Csv_Files, Experiment, RecomededSpeed, Material,Toolsdate,Coating, Adhesive
 import csv
 import random
 

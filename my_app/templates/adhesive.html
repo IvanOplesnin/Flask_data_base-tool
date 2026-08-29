@@ -48,7 +48,7 @@
                 <label for="temperature" class="sr-only">Температура</label>
                 <select name="temperature" id="temperature" class="form-control mb-2">
                     <option value="">Различные температурные режимы</option>
-                    {% for adh in uniq_temperature %}
+                    {% for adh in available_temperatures %}
                         <option value="{{ adh.temperature }}" {% if adh.temperature == selected_temperature %}selected{% endif %}>{{ adh.temperature | int }}</option>
                     {% endfor %}
                 </select>

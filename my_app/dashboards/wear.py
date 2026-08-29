@@ -1,7 +1,7 @@
 import plotly.graph_objs as go
 from dash import Dash, dcc, html, Input, Output
 
-from my_app.models import Experiments, WearTables
+from my_app.models import Experiment, WearMeasurement
 
 
 def create_dash_wear(flask_app):
@@ -10,8 +10,8 @@ def create_dash_wear(flask_app):
 
     def serve_layout():
         with flask_app.app_context():
-            values: list[Experiments] = Experiments.query.all()
-            dict_values = [
+            values: list[Experiment] = Experiment.query.all()
+            dropdown_options = [
                 {
                     'label': f'{experiment.material.name}, {experiment.coating.name}, {experiment.tool.name}',
                     'value': f'{experiment.id}'
@@ -23,7 +23,7 @@ def create_dash_wear(flask_app):
                             dcc.Graph(id='dash_wear_graph'),
                             dcc.Dropdown(
                                 id='dash_wear_dropdown',
-                                options=dict_values,
+                                options=dropdown_options,
                                 multi=True  # Разрешаем множественный выбор
                             )
                         ]
@@ -51,13 +51,13 @@ def create_dash_wear(flask_app):
             for experiment_id in selected_experiment_ids:
                 # Преобразуем experiment_id в правильный тип (int)
                 experiment_id = int(experiment_id)
-                experiment = Experiments.query.get(experiment_id)
+                experiment = Experiment.query.get(experiment_id)
                 if not experiment:
                     continue
-                df: list[WearTables] = WearTables.query.filter_by(experiment_id=experiment_id).all()
-                df_sorted = sorted(df, key=lambda x: x.length)
-                x = [x.length for x in df_sorted]
-                y = [y.wear for y in df_sorted]
+                wear_measurements: list[WearMeasurement] = WearMeasurement.query.filter_by(experiment_id=experiment_id).all()
+                sorted_measurements = sorted(wear_measurements, key=lambda x: x.length)
+                x = [x.length for x in sorted_measurements]
+                y = [y.wear for y in sorted_measurements]
                 # Добавляем линию на график для каждого эксперимента
                 fig.add_trace(go.Scatter(
                     x=x,
@@ -104,14 +104,14 @@ def create_wear_on_info_experiments(flask_app):
             return go.Figure()
 
         with flask_app.app_context():
-            experiment = Experiments.query.get(int(experiment_id))
+            experiment = Experiment.query.get(int(experiment_id))
             if not experiment:
                 return go.Figure()
 
-            df: list[WearTables] = WearTables.query.filter_by(experiment_id=experiment.id).all()
-            df_sorted = sorted(df, key=lambda x: x.length)
-            x = [entry.length for entry in df_sorted]
-            y = [entry.wear for entry in df_sorted]
+            wear_measurements: list[WearMeasurement] = WearMeasurement.query.filter_by(experiment_id=experiment.id).all()
+            sorted_measurements = sorted(wear_measurements, key=lambda x: x.length)
+            x = [entry.length for entry in sorted_measurements]
+            y = [entry.wear for entry in sorted_measurements]
 
             fig = go.Figure(
                 data=[
