@@ -7,6 +7,7 @@ from .entities import (
     CsvFile,
     DrillGeometry,
     Experiment,
+    ImportBatch,
     Insert,
     MaterialType,
     Material,
@@ -21,6 +22,6 @@ from .entities import (
 
 __all__ = [
     'Adhesive', 'Coating', 'Coefficient', 'CsvFile', 'DrillGeometry',
-    'Experiment', 'Insert', 'MaterialType', 'Material', 'MillingGeometry',
+    'Experiment', 'ImportBatch', 'Insert', 'MaterialType', 'Material', 'MillingGeometry',
     'RecommendationParameter', 'TapGeometry', 'Tool', 'TurningGeometry', 'User', 'WearMeasurement',
 ]

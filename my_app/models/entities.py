@@ -195,6 +195,8 @@ class Experiment(db.Model):
     length_path = db.Column(db.Float)
     durability = db.Column(db.Float)
     csv_id = db.Column(db.Integer, db.ForeignKey(CsvFile.id))
+    external_id = db.Column(sa.String(64), unique=True, index=True)
+    import_batch_id = db.Column(db.Integer, db.ForeignKey('import_batches.id', ondelete='SET NULL'))
     data_experiment = db.Column(db.Date)
     date_recording = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -202,6 +204,7 @@ class Experiment(db.Model):
     coating = db.relationship('Coating', foreign_keys=[coating_id], back_populates='experiments')
     material = db.relationship('Material', foreign_keys=[material_id], back_populates='experiments')
     csv_file = db.relationship('CsvFile', foreign_keys=[csv_id], back_populates='experiment', uselist=False)
+    import_batch = db.relationship('ImportBatch', back_populates='experiments')
     wear_tables = db.relationship('WearMeasurement', back_populates='experiment')
 
     @property
@@ -220,6 +223,32 @@ class Experiment(db.Model):
 
     def __repr__(self):
         return '<Experiment {}>'.format(self.id)
+
+
+class ImportBatch(db.Model):
+    """Журнал одной попытки импорта файлов с результатами экспериментов."""
+
+    __tablename__ = 'import_batches'
+
+    id = db.Column(db.Integer, primary_key=True)
+    uploader_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
+    status = db.Column(sa.String(16), nullable=False, default='preview', index=True)
+    experiments_filename = db.Column(sa.String(255), nullable=False)
+    wear_filename = db.Column(sa.String(255))
+    experiments_path = db.Column(sa.String(512), nullable=False, unique=True)
+    wear_path = db.Column(sa.String(512), unique=True)
+    checksum = db.Column(sa.String(64), nullable=False)
+    experiment_rows = db.Column(db.Integer, nullable=False, default=0)
+    wear_rows = db.Column(db.Integer, nullable=False, default=0)
+    imported_experiments = db.Column(db.Integer, nullable=False, default=0)
+    imported_wear = db.Column(db.Integer, nullable=False, default=0)
+    error_count = db.Column(db.Integer, nullable=False, default=0)
+    errors_summary = db.Column(sa.Text)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+
+    uploaded_by = db.relationship('User', back_populates='import_batches')
+    experiments = db.relationship('Experiment', back_populates='import_batch')
 
 
 class RecommendationParameter(db.Model):
@@ -343,6 +372,7 @@ class User(UserMixin, db.Model):
     username = db.Column(sa.String(64), unique=True, nullable=False, index=True)
     password_hash = db.Column(sa.String(256), nullable=False)
     role = db.Column(sa.String(16), nullable=False, default='reader', index=True)
+    import_batches = db.relationship('ImportBatch', back_populates='uploaded_by')
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)

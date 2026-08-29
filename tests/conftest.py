@@ -15,6 +15,8 @@ def app(tmp_path):
         'SECRET_KEY': 'test-secret-key',
         'SQLALCHEMY_DATABASE_URI': f'sqlite:///{database_path}',
         'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+        'IMPORT_UPLOAD_FOLDER': str(tmp_path / 'uploads'),
+        'IMPORT_MAX_FILE_SIZE': 1024 * 1024,
     })
 
     with application.app_context():

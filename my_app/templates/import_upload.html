@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block tittle %}
+<main class="container py-4" style="max-width: 760px;">
+  <h1>Загрузка CSV-файлов</h1>
+  <p>Файл экспериментов обязателен, файл измерений износа — необязателен. Поддерживаются UTF-8, UTF-8 BOM и Windows-1251; разделитель — <code>;</code> или <code>,</code>.</p>
+  <form method="post" enctype="multipart/form-data" class="mt-4">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      {{ form.experiments_file.label(class='form-label') }}
+      {{ form.experiments_file(class='form-control', accept='.csv,text/csv') }}
+      {% for error in form.experiments_file.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="mb-3">
+      {{ form.wear_file.label(class='form-label') }}
+      {{ form.wear_file(class='form-control', accept='.csv,text/csv') }}
+      {% for error in form.wear_file.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    </div>
+    {{ form.submit(class='btn btn-primary') }}
+    <a class="btn btn-outline-secondary" href="{{ url_for('web.imports') }}">Отмена</a>
+  </form>
+  <h2 class="h5 mt-5">Обязательные столбцы</h2>
+  <p><code>external_id; material; tool; coating; spindle_speed; feed_table; depth_cut; width_cut; length_path; durability; data_experiment</code></p>
+  <p>Для износа: <code>external_id; length; wear</code>. Названия материала, инструмента и покрытия должны точно совпадать со справочниками системы.</p>
+</main>
+{% endblock %}

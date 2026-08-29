@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileAllowed, FileRequired
 from wtforms import StringField, PasswordField, FloatField, IntegerField, SubmitField, SelectField, BooleanField, FormField, Form, \
-    DateField, FieldList
+    DateField, FieldList, FileField
 from wtforms.validators import DataRequired, NumberRange, Optional
 from datetime import date
 
@@ -154,6 +155,21 @@ class DeleteConfirmationForm(FlaskForm):
     """CSRF-защищённое подтверждение удаления записи."""
 
     submit = SubmitField('Удалить')
+
+
+class ImportUploadForm(FlaskForm):
+    """Файлы для предварительной проверки импорта результатов экспериментов."""
+
+    experiments_file = FileField(
+        'Эксперименты CSV',
+        validators=[FileRequired(message='Выберите файл экспериментов.'), FileAllowed(['csv'], 'Допустимы только CSV-файлы.')],
+    )
+    wear_file = FileField('Износ CSV (необязательно)', validators=[FileAllowed(['csv'], 'Допустимы только CSV-файлы.')])
+    submit = SubmitField('Проверить файлы')
+
+
+class ConfirmImportForm(FlaskForm):
+    submit = SubmitField('Подтвердить импорт')
 
 
 class TapForm(FlaskForm):

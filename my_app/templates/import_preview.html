@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block tittle %}
+<main class="container py-4" style="max-width: 960px;">
+  <p><a href="{{ url_for('web.imports') }}">← К журналу импортов</a></p>
+  <h1>Импорт №{{ import_batch.id }}</h1>
+  <dl class="row">
+    <dt class="col-sm-3">Статус</dt><dd class="col-sm-9">{{ import_batch.status }}</dd>
+    <dt class="col-sm-3">Файл экспериментов</dt><dd class="col-sm-9"><a href="{{ url_for('web.download_import_file', import_batch_id=import_batch.id, file_kind='experiments') }}">{{ import_batch.experiments_filename }}</a></dd>
+    {% if import_batch.wear_filename %}<dt class="col-sm-3">Файл износа</dt><dd class="col-sm-9"><a href="{{ url_for('web.download_import_file', import_batch_id=import_batch.id, file_kind='wear') }}">{{ import_batch.wear_filename }}</a></dd>{% endif %}
+    <dt class="col-sm-3">Проверено строк</dt><dd class="col-sm-9">Эксперименты: {{ import_batch.experiment_rows }}, износ: {{ import_batch.wear_rows }}</dd>
+  </dl>
+
+  {% if import_batch.status == 'preview' %}
+    <div class="alert alert-success">Ошибок не найдено. После подтверждения импорт будет выполнен одной транзакцией.</div>
+    <form method="post" action="{{ url_for('web.confirm_import', import_batch_id=import_batch.id) }}">
+      {{ confirm_form.hidden_tag() }}
+      {{ confirm_form.submit(class='btn btn-success') }}
+    </form>
+  {% elif import_batch.status == 'completed' %}
+    <div class="alert alert-success">Импорт завершён: добавлено экспериментов — {{ import_batch.imported_experiments }}, точек износа — {{ import_batch.imported_wear }}.</div>
+  {% else %}
+    <div class="alert alert-danger">Импорт не выполнен.</div>
+  {% endif %}
+
+  {% if issues %}
+    <h2 class="h4 mt-4">Ошибки проверки</h2>
+    <ul class="list-group">
+      {% for issue in issues %}<li class="list-group-item list-group-item-danger">{{ issue }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+</main>
+{% endblock %}

@@ -1,14 +1,19 @@
-from flask import Blueprint, current_app, jsonify, flash, redirect, render_template, request, session, url_for
+import os
+from datetime import datetime
+
+from flask import Blueprint, Response, abort, current_app, jsonify, flash, redirect, render_template, request, send_file, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
+from werkzeug.utils import secure_filename
 from sqlalchemy.orm import joinedload
 
 from my_app.extensions import db
 from my_app.forms import MaterialForm, CoatingForm, MillingGeometryForm, TurningGeometryForm, DrillGeometryForm, \
-    DeleteConfirmationForm, ExperimentForm, LoginForm, TapForm, ToolForm, UserForm
+    ConfirmImportForm, DeleteConfirmationForm, ExperimentForm, ImportUploadForm, LoginForm, TapForm, ToolForm, UserForm
 from my_app.models import Material, Tool, Coating, Experiment, RecommendationParameter, Adhesive, Coefficient, \
-    MaterialType, MillingGeometry, WearMeasurement, DrillGeometry, TurningGeometry, Insert, TapGeometry, User
+    ImportBatch, MaterialType, MillingGeometry, WearMeasurement, DrillGeometry, TurningGeometry, Insert, TapGeometry, User
 from my_app.security import roles_required
 from my_app.services.calculations import calculate_cutting_parameters
+from my_app.services.experiment_import import ImportFileError, csv_template, issues_summary, save_uploaded_import_files, validate_import_files
 
 web_bp = Blueprint('web', __name__)
 
@@ -85,6 +90,165 @@ def delete_user(user_id):
     db.session.commit()
     flash(f'Пользователь «{username}» удалён.', 'success')
     return redirect(url_for('web.users'))
+
+
+def _get_import_batch_for_current_user(import_batch_id):
+    import_batch = db.get_or_404(ImportBatch, import_batch_id)
+    if current_user.role != 'admin' and import_batch.uploader_id != current_user.id:
+        abort(403)
+    return import_batch
+
+
+def _record_preview_result(import_batch, preview):
+    import_batch.experiment_rows = preview.experiment_rows
+    import_batch.wear_rows = preview.wear_rows
+    import_batch.error_count = preview.error_count
+    import_batch.errors_summary = issues_summary(preview)
+    import_batch.status = 'preview' if preview.is_valid else 'invalid'
+
+
+@web_bp.route('/imports')
+@roles_required('admin', 'writer')
+def imports():
+    statement = db.select(ImportBatch).order_by(ImportBatch.created_at.desc())
+    if current_user.role != 'admin':
+        statement = statement.where(ImportBatch.uploader_id == current_user.id)
+    return render_template('imports.html', import_batches=db.session.scalars(statement).all())
+
+
+@web_bp.route('/imports/upload', methods=['GET', 'POST'])
+@roles_required('admin', 'writer')
+def upload_import():
+    form = ImportUploadForm()
+    if form.validate_on_submit():
+        try:
+            experiments_path, wear_path, checksum = save_uploaded_import_files(
+                form.experiments_file.data,
+                form.wear_file.data,
+                current_app.config['IMPORT_UPLOAD_FOLDER'],
+                current_app.config['IMPORT_MAX_FILE_SIZE'],
+            )
+            preview = validate_import_files(experiments_path, wear_path)
+        except ImportFileError as error:
+            flash(str(error), 'danger')
+        else:
+            import_batch = ImportBatch(
+                uploader_id=current_user.id,
+                experiments_filename=secure_filename(form.experiments_file.data.filename) or 'experiments.csv',
+                wear_filename=(secure_filename(form.wear_file.data.filename) or 'wear_measurements.csv') if form.wear_file.data else None,
+                experiments_path=experiments_path,
+                wear_path=wear_path,
+                checksum=checksum,
+            )
+            _record_preview_result(import_batch, preview)
+            db.session.add(import_batch)
+            db.session.commit()
+            return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+    return render_template('import_upload.html', form=form)
+
+
+@web_bp.route('/imports/<int:import_batch_id>')
+@roles_required('admin', 'writer')
+def import_preview(import_batch_id):
+    import_batch = _get_import_batch_for_current_user(import_batch_id)
+    return render_template(
+        'import_preview.html',
+        import_batch=import_batch,
+        issues=(import_batch.errors_summary or '').splitlines(),
+        confirm_form=ConfirmImportForm(),
+    )
+
+
+@web_bp.route('/imports/<int:import_batch_id>/confirm', methods=['POST'])
+@roles_required('admin', 'writer')
+def confirm_import(import_batch_id):
+    import_batch = _get_import_batch_for_current_user(import_batch_id)
+    form = ConfirmImportForm()
+    if not form.validate_on_submit():
+        flash('Не удалось подтвердить импорт.', 'danger')
+        return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+    if import_batch.status != 'preview':
+        flash('Подтвердить можно только импорт без ошибок, ожидающий подтверждения.', 'warning')
+        return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+
+    try:
+        preview = validate_import_files(import_batch.experiments_path, import_batch.wear_path)
+    except ImportFileError as error:
+        import_batch.status = 'failed'
+        import_batch.error_count = 1
+        import_batch.errors_summary = str(error)
+        db.session.commit()
+        flash('Не удалось повторно прочитать файлы импорта.', 'danger')
+        return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+
+    if not preview.is_valid:
+        _record_preview_result(import_batch, preview)
+        db.session.commit()
+        flash('Данные изменились или перестали соответствовать справочникам. Импорт не выполнен.', 'danger')
+        return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+
+    try:
+        experiments_by_external_id = {}
+        for values in preview.experiments:
+            external_id = values.pop('external_id')
+            experiment = Experiment(external_id=external_id, import_batch=import_batch, **values)
+            db.session.add(experiment)
+            experiments_by_external_id[external_id] = experiment
+        db.session.flush()
+        for values in preview.wear_measurements:
+            experiment = experiments_by_external_id[values['external_id']]
+            db.session.add(WearMeasurement(experiment_id=experiment.id, length=values['length'], wear=values['wear']))
+
+        import_batch.status = 'completed'
+        import_batch.imported_experiments = len(preview.experiments)
+        import_batch.imported_wear = len(preview.wear_measurements)
+        import_batch.error_count = 0
+        import_batch.errors_summary = None
+        import_batch.completed_at = datetime.utcnow()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        failed_batch = db.session.get(ImportBatch, import_batch_id)
+        failed_batch.status = 'failed'
+        failed_batch.error_count = 1
+        failed_batch.errors_summary = 'Ошибка базы данных: импорт отменён целиком, записи не добавлены.'
+        db.session.commit()
+        flash('Импорт отменён: ни одна запись не была добавлена.', 'danger')
+        return redirect(url_for('web.import_preview', import_batch_id=import_batch_id))
+
+    flash(f'Импорт завершён: экспериментов — {import_batch.imported_experiments}, точек износа — {import_batch.imported_wear}.', 'success')
+    return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+
+
+@web_bp.route('/imports/<int:import_batch_id>/files/<string:file_kind>')
+@roles_required('admin', 'writer')
+def download_import_file(import_batch_id, file_kind):
+    import_batch = _get_import_batch_for_current_user(import_batch_id)
+    files = {
+        'experiments': (import_batch.experiments_path, import_batch.experiments_filename),
+        'wear': (import_batch.wear_path, import_batch.wear_filename),
+    }
+    if file_kind not in files:
+        abort(404)
+    path, filename = files[file_kind]
+    if not path or not filename or not os.path.isfile(path):
+        abort(404)
+    return send_file(path, as_attachment=True, download_name=filename, mimetype='text/csv')
+
+
+@web_bp.route('/imports/templates/<string:template_kind>')
+@roles_required('admin', 'writer')
+def download_import_template(template_kind):
+    try:
+        content = '\ufeff' + csv_template(template_kind)
+    except KeyError:
+        abort(404)
+    filename = f'{template_kind}_template.csv'
+    return Response(
+        content,
+        content_type='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename={filename}'},
+    )
 
 
 @web_bp.route('/processing/<processing_type>')

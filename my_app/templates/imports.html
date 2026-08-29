@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block tittle %}
+<main class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Импорт результатов экспериментов</h1>
+    <a class="btn btn-primary" href="{{ url_for('web.upload_import') }}">Загрузить CSV</a>
+  </div>
+  <p>Загрузите таблицу экспериментов и, при необходимости, таблицу точек износа. Данные попадут в базу только после проверки и отдельного подтверждения.</p>
+  <p>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('web.download_import_template', template_kind='experiments') }}">Шаблон экспериментов</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('web.download_import_template', template_kind='wear') }}">Шаблон износа</a>
+  </p>
+  <table class="table table-striped align-middle">
+    <thead><tr><th>№</th><th>Дата</th><th>Автор</th><th>Файл экспериментов</th><th>Статус</th><th>Результат</th><th></th></tr></thead>
+    <tbody>
+    {% for batch in import_batches %}
+      <tr>
+        <td>{{ batch.id }}</td>
+        <td>{{ batch.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td>{{ batch.uploaded_by.username if batch.uploaded_by else 'Удалённый пользователь' }}</td>
+        <td>{{ batch.experiments_filename }}</td>
+        <td>
+          {% set badge = {'preview': 'warning', 'invalid': 'danger', 'completed': 'success', 'failed': 'danger'}.get(batch.status, 'secondary') %}
+          <span class="badge text-bg-{{ badge }}">{{ {'preview': 'ожидает подтверждения', 'invalid': 'ошибки проверки', 'completed': 'завершён', 'failed': 'ошибка'}.get(batch.status, batch.status) }}</span>
+        </td>
+        <td>{{ batch.imported_experiments }}/{{ batch.experiment_rows }} экспериментов</td>
+        <td><a class="btn btn-outline-primary btn-sm" href="{{ url_for('web.import_preview', import_batch_id=batch.id) }}">Подробнее</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="text-muted">Импортов пока нет.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock %}
