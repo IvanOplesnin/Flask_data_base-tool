@@ -1,14 +1,78 @@
-from flask import Blueprint, jsonify, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, jsonify, flash, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.orm import joinedload
 
 from my_app.extensions import db
 from my_app.forms import MaterialForm, CoatingForm, MillingGeometryForm, TurningGeometryForm, DrillGeometryForm, \
-    ExperimentForm, ToolForm
+    ExperimentForm, LoginForm, TapForm, ToolForm, UserForm
 from my_app.models import Material, Tool, Coating, Experiment, RecommendationParameter, Adhesive, Coefficient, \
-    MaterialType, MillingGeometry, WearMeasurement, DrillGeometry, TurningGeometry, Insert
+    MaterialType, MillingGeometry, WearMeasurement, DrillGeometry, TurningGeometry, Insert, TapGeometry, User
+from my_app.security import roles_required
 from my_app.services.calculations import calculate_cutting_parameters
 
 web_bp = Blueprint('web', __name__)
+
+
+@web_bp.before_request
+def require_authenticated_user():
+    if not current_app.config.get('AUTH_REQUIRED', True):
+        return None
+    if request.endpoint in {'web.login', 'static'} or current_user.is_authenticated:
+        return None
+    return redirect(url_for('web.login', next=request.url))
+
+
+@web_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('web.select_parameters'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = db.session.scalar(db.select(User).where(User.username == form.username.data))
+        if user and user.check_password(form.password.data):
+            login_user(user)
+            return redirect(request.args.get('next') or url_for('web.select_parameters'))
+        flash('Неверный логин или пароль.', 'danger')
+    return render_template('login.html', form=form)
+
+
+@web_bp.route('/logout', methods=['POST'])
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('web.login'))
+
+
+@web_bp.route('/users', methods=['GET', 'POST'])
+@roles_required('admin')
+def users():
+    form = UserForm()
+    if form.validate_on_submit():
+        if db.session.scalar(db.select(User).where(User.username == form.username.data)):
+            flash('Такой логин уже существует.', 'danger')
+        else:
+            user = User(username=form.username.data, role=form.role.data)
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            flash('Пользователь создан.', 'success')
+            return redirect(url_for('web.users'))
+    return render_template('users.html', form=form, users=db.session.scalars(db.select(User).order_by(User.username)).all())
+
+
+@web_bp.route('/processing/<processing_type>')
+def processing_selection(processing_type):
+    labels = {'turning': 'Точение', 'milling': 'Фрезерование', 'threading': 'Резьбонарезание'}
+    if processing_type not in labels:
+        return jsonify(error='Неизвестный вид обработки'), 404
+    return render_template(
+        'processing_selection.html',
+        processing_type=processing_type,
+        processing_label=labels[processing_type],
+        materials=Material.query.order_by(Material.name).all(),
+        tools=Tool.query.filter_by(processing_type=processing_type).order_by(Tool.name).all(),
+        coatings=Coating.query.order_by(Coating.name).all(),
+    )
 
 
 @web_bp.route('/')
@@ -58,6 +122,7 @@ def recommended_speed():
 
 
 @web_bp.route('/add', methods=['POST', 'GET'])
+@roles_required('admin', 'writer')
 def add():
     material_form = MaterialForm()
     coating_form = CoatingForm()
@@ -215,11 +280,12 @@ def materials_table():
     if search_query:
         materials_query = materials_query.filter(Material.name.ilike(f'%{search_query}%'))
 
-    # Получаем отсортированный список материалов
-    materials = materials_query.order_by(Material.name).all()
+    pagination = materials_query.order_by(Material.name).paginate(
+        page=request.args.get('page', 1, type=int), per_page=20, error_out=False
+    )
 
-    return render_template('materials.html', materials=materials, material_types=material_types,
-                           selected_type_id=selected_type_id, search_query=search_query)
+    return render_template('materials.html', materials=pagination.items, pagination=pagination,
+                           material_types=material_types, selected_type_id=selected_type_id, search_query=search_query)
 
 
 @web_bp.route('/materials/search')
@@ -310,6 +376,7 @@ def calculate():
 
 
 @web_bp.route('/materials/<int:material_id>/delete')
+@roles_required('admin')
 def delete_materials(material_id):
     entity_to_delete = Material.query.get_or_404(material_id)
     try:
@@ -321,6 +388,7 @@ def delete_materials(material_id):
 
 
 @web_bp.route('/materials/<int:material_id>/update', methods=['GET', 'POST'])
+@roles_required('admin', 'writer')
 def materials_update(material_id):
     material_form = MaterialForm()
     material = Material.query.get_or_404(material_id)
@@ -372,15 +440,15 @@ def mat_info(material_id):
 @web_bp.route('/coatings')
 def coatings():
     search_query = request.args.get('search_query', '')
-    coatings = Coating.query.order_by(Coating.name)
+    query = Coating.query
     if search_query:
-        coatings = [coating for coating in coatings.all() if search_query.lower() in coating.name.lower()]
-    else:
-        coatings = coatings.all()
-    return render_template('coating.html', coatings=coatings, search_query=search_query)
+        query = query.filter(Coating.name.ilike(f'%{search_query}%'))
+    pagination = query.order_by(Coating.name).paginate(page=request.args.get('page', 1, type=int), per_page=20, error_out=False)
+    return render_template('coating.html', coatings=pagination.items, pagination=pagination, search_query=search_query)
 
 
 @web_bp.route('/coating/<int:coating_id>/delete')
+@roles_required('admin')
 def delete_coating(coating_id):
     entity_to_delete = Coating.query.get_or_404(coating_id)
     try:
@@ -392,6 +460,7 @@ def delete_coating(coating_id):
 
 
 @web_bp.route('/coating/<int:coating_id>/update', methods=['GET', 'POST'])
+@roles_required('admin', 'writer')
 def coating_update(coating_id):
     coating = Coating.query.get(coating_id)
     coating_form = CoatingForm()
@@ -439,16 +508,64 @@ def tools():
     if tool_type != 'all':
         query = query.filter(Tool.tool_type == tool_type)
 
-    # Поиск по названию
     if search_query:
-        tools = [tool for tool in query.all() if search_query.lower() in tool.name.lower()]
-    else:
-        tools = query.all()
+        query = query.filter(Tool.name.ilike(f'%{search_query}%'))
+    pagination = query.order_by(Tool.name).paginate(page=request.args.get('page', 1, type=int), per_page=20, error_out=False)
 
-    return render_template('tools.html', tools=tools, selected_tool_type=tool_type, search_query=search_query)
+    return render_template('tools.html', tools=pagination.items, pagination=pagination,
+                           selected_tool_type=tool_type, search_query=search_query)
+
+
+@web_bp.route('/catalog/milling-cutters')
+def milling_cutters_catalog():
+    pagination = Tool.query.filter_by(processing_type='milling').order_by(Tool.name).paginate(
+        page=request.args.get('page', 1, type=int), per_page=20, error_out=False
+    )
+    return render_template('tool_catalog.html', title='Фрезы', items=pagination.items, pagination=pagination, item_type='tool')
+
+
+@web_bp.route('/catalog/inserts')
+def inserts_catalog():
+    pagination = Insert.query.order_by(Insert.name).paginate(
+        page=request.args.get('page', 1, type=int), per_page=20, error_out=False
+    )
+    return render_template('tool_catalog.html', title='Режущие пластины', items=pagination.items, pagination=pagination, item_type='insert')
+
+
+@web_bp.route('/catalog/taps')
+def taps_catalog():
+    pagination = Tool.query.filter_by(processing_type='threading').order_by(Tool.name).paginate(
+        page=request.args.get('page', 1, type=int), per_page=20, error_out=False
+    )
+    return render_template('tool_catalog.html', title='Метчики', items=pagination.items, pagination=pagination, item_type='tap')
+
+
+@web_bp.route('/catalog/taps/add', methods=['GET', 'POST'])
+@roles_required('admin', 'writer')
+def add_tap():
+    form = TapForm()
+    if form.validate_on_submit():
+        tap = Tool(
+            name=form.name.data,
+            name_easy=form.name.data,
+            material_tool=form.material_tool.data,
+            tool_type='tap',
+            processing_type='threading',
+        )
+        tap.tap_geometry = TapGeometry(
+            thread_standard=form.thread_standard.data,
+            thread_diameter=form.thread_diameter.data,
+            pitch=form.pitch.data,
+        )
+        db.session.add(tap)
+        db.session.commit()
+        flash('Метчик добавлен.', 'success')
+        return redirect(url_for('web.taps_catalog'))
+    return render_template('tap_form.html', form=form)
 
 
 @web_bp.route('/tool/<int:tool_id>/delete')
+@roles_required('admin')
 def delete_tool(tool_id):
     entity_to_delete = Tool.query.get_or_404(tool_id)
     tool_geometry = [getattr(entity_to_delete, 'milling_geometry'),
@@ -467,6 +584,7 @@ def delete_tool(tool_id):
 
 
 @web_bp.route('/tool/<int:tool_id>/update', methods=['GET', 'POST'])
+@roles_required('admin', 'writer')
 def tool_update(tool_id):
     tool = Tool.query.get_or_404(tool_id)
 
@@ -610,14 +728,27 @@ def experiments_table():
         reverse = (order == 'desc')
         experiments_query = sorted(experiments_query, key=lambda x: getattr(x, sort_by), reverse=reverse)
 
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    total = len(experiments_query)
+    pagination = type('PaginationInfo', (), {
+        'page': page,
+        'pages': max(1, (total + per_page - 1) // per_page),
+        'has_prev': page > 1,
+        'has_next': page * per_page < total,
+        'prev_num': page - 1,
+        'next_num': page + 1,
+    })()
     return render_template('experiment.html',
-                           experiment=experiments_query,
+                           experiment=experiments_query[(page - 1) * per_page:page * per_page],
+                           pagination=pagination,
                            sort_by=sort_by,
                            order=order,
                            request_args=request.args)
 
 
 @web_bp.route('/experiments/<int:experiment_id>/delete')
+@roles_required('admin')
 def delete_experiment(experiment_id):
     experiment: Experiment = Experiment.query.get_or_404(experiment_id)
     wear_table: list[WearMeasurement] = WearMeasurement.query.filter_by(experiment_id=experiment_id).all()
@@ -632,6 +763,7 @@ def delete_experiment(experiment_id):
 
 
 @web_bp.route('/experiment/add', methods=['GET', 'POST'])
+@roles_required('admin', 'writer')
 def add_experiment():
     form = ExperimentForm()
     if request.method == 'POST':
@@ -720,14 +852,18 @@ def adhesive():
 
 @web_bp.route("/expected_parameters", methods=['GET', 'POST'])
 def expected_parameters():
-    materials = Material.query.all()
-    tools = Tool.query.all()
+    processing_type = request.args.get('processing_type', 'milling')
+    if processing_type not in {'turning', 'milling', 'threading'}:
+        processing_type = 'milling'
+
+    materials = Material.query.order_by(Material.name).all()
+    tools = Tool.query.filter_by(processing_type=processing_type).order_by(Tool.name).all()
     coatings = Coating.query.all()
     material_types = MaterialType.query.all()
 
-    selected_material = None
-    selected_tool = None
-    selected_coating = None
+    selected_material = request.args.get('material_id', type=int)
+    selected_tool = request.args.get('tool_id', type=int)
+    selected_coating = request.args.get('coating_id', type=int)
     coefficient = None
 
     return render_template(
@@ -739,7 +875,8 @@ def expected_parameters():
         selected_material=selected_material,
         selected_tool=selected_tool,
         selected_coating=selected_coating,
-        material_types=material_types
+        material_types=material_types,
+        processing_type=processing_type,
     )
 
 

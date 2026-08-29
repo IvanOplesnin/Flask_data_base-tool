@@ -9,6 +9,7 @@ def app(tmp_path):
     database_path = tmp_path / 'test.sqlite'
     application = create_app({
         'TESTING': True,
+        'AUTH_REQUIRED': False,
         'DISABLE_DASHBOARDS': True,
         'WTF_CSRF_ENABLED': False,
         'SECRET_KEY': 'test-secret-key',

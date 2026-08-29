@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block tittle %}
+<main class="container py-4">
+    <h1>Пользователи</h1>
+    <form method="post" class="row g-3 mb-4">
+        {{ form.hidden_tag() }}
+        <div class="col-md-4">{{ form.username(class='form-control', placeholder='Логин') }}</div>
+        <div class="col-md-4">{{ form.password(class='form-control', placeholder='Пароль') }}</div>
+        <div class="col-md-2">{{ form.role(class='form-select') }}</div>
+        <div class="col-md-2">{{ form.submit(class='btn btn-primary') }}</div>
+    </form>
+    <table class="table"><thead><tr><th>Логин</th><th>Роль</th></tr></thead><tbody>{% for user in users %}<tr><td>{{ user.username }}</td><td>{{ user.role }}</td></tr>{% endfor %}</tbody></table>
+</main>
+{% endblock %}

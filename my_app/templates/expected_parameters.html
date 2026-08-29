@@ -53,7 +53,15 @@
     <h1 class="mt-4">Параметры резания</h1>
 
     <!-- Форма выбора параметров -->
-    <form method="POST">
+    <form method="GET">
+        <div class="form-group">
+            <label for="processing_type">Вид обработки</label>
+            <select class="form-control" id="processing_type" name="processing_type" onchange="this.form.submit()">
+                <option value="turning" {% if processing_type == 'turning' %}selected{% endif %}>Точение</option>
+                <option value="milling" {% if processing_type == 'milling' %}selected{% endif %}>Фрезерование</option>
+                <option value="threading" {% if processing_type == 'threading' %}selected{% endif %}>Резьбонарезание</option>
+            </select>
+        </div>
         <!-- Выпадающий список для выбора типа материала -->
         <div class="form-group">
             <label for="material_type">Тип материала</label>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,14 +10,19 @@
 <div class="container">
     <header class="d-flex justify-content-center py-3">
       <ul class="nav nav-pills">
-        <li class="nav-item"><a href="/add" class="nav-link active" aria-current="page">Добавление данных</a></li>
+        {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}<li class="nav-item"><a href="/add" class="nav-link active">Добавление данных</a></li>{% endif %}
         <li class="nav-item"><a href="/expected_parameters" class="nav-link">Режимы резания</a></li>
         <li class="nav-item"><a href="/materials" class="nav-link">Материалы</a></li>
         <li class="nav-item"><a href="/coatings" class="nav-link">Покрытия</a></li>
         <li class="nav-item"><a href="/tools" class="nav-link">Инструменты</a></li>
+        <li class="nav-item"><a href="{{ url_for('web.milling_cutters_catalog') }}" class="nav-link">Фрезы</a></li>
+        <li class="nav-item"><a href="{{ url_for('web.inserts_catalog') }}" class="nav-link">Пластины</a></li>
+        <li class="nav-item"><a href="{{ url_for('web.taps_catalog') }}" class="nav-link">Метчики</a></li>
         <li class="nav-item"><a href="/adhesive" class="nav-link">Триботехнические свойства</a></li>
         <li class="nav-item"><a href="/experiments" class="nav-link">Эксперименты</a></li>
         <li class="nav-item"><a href="/" class="nav-link">Начальная страница</a></li>
+        {% if current_user.is_authenticated and current_user.role == 'admin' %}<li class="nav-item"><a href="{{ url_for('web.users') }}" class="nav-link">Пользователи</a></li>{% endif %}
+        {% if current_user.is_authenticated %}<li class="nav-item"><form method="post" action="{{ url_for('web.logout') }}"><button class="btn btn-link nav-link">Выйти ({{ current_user.username }})</button></form></li>{% endif %}
       </ul>
     </header>
   </div>

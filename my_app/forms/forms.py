@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, FloatField, IntegerField, SubmitField, SelectField, BooleanField, FormField, Form, \
+from wtforms import StringField, PasswordField, FloatField, IntegerField, SubmitField, SelectField, BooleanField, FormField, Form, \
     DateField, FieldList
 from wtforms.validators import DataRequired, NumberRange, Optional
 from datetime import date
@@ -132,3 +132,28 @@ class ExperimentForm(FlaskForm):
         self.tool_id.choices = [(t.id, t.name) for t in Tool.query.all()]
         self.coating_id.choices = [(c.id, c.name) for c in Coating.query.all()]
 
+
+class LoginForm(FlaskForm):
+    username = StringField('Логин', validators=[DataRequired()])
+    password = PasswordField('Пароль', validators=[DataRequired()])
+    submit = SubmitField('Войти')
+
+
+class UserForm(FlaskForm):
+    username = StringField('Логин', validators=[DataRequired()])
+    password = PasswordField('Пароль', validators=[DataRequired()])
+    role = SelectField('Роль', choices=[
+        ('admin', 'Администратор'),
+        ('writer', 'Писатель'),
+        ('reader', 'Читатель'),
+    ], validators=[DataRequired()])
+    submit = SubmitField('Создать пользователя')
+
+
+class TapForm(FlaskForm):
+    name = StringField('Наименование метчика', validators=[DataRequired()])
+    material_tool = StringField('Материал метчика', validators=[DataRequired()])
+    thread_standard = StringField('Стандарт резьбы', validators=[DataRequired()])
+    thread_diameter = FloatField('Диаметр резьбы, мм', validators=[DataRequired(), NumberRange(min=0.01)])
+    pitch = FloatField('Шаг резьбы, мм', validators=[DataRequired(), NumberRange(min=0.01)])
+    submit = SubmitField('Добавить метчик')

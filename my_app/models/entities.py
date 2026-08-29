@@ -2,6 +2,8 @@ import math
 from datetime import datetime
 
 import sqlalchemy as sa
+from flask_login import UserMixin
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from my_app.extensions import db
 
@@ -33,12 +35,14 @@ class Tool(db.Model):
     name = db.Column(sa.String(64), index=True, unique=True)
     name_easy = db.Column(sa.String(64), default='')
     tool_type = db.Column(sa.String(64))  # 'milling', 'turning', 'drill', 'drill_center'
+    processing_type = db.Column(sa.String(32), nullable=False, default='milling', index=True)
     material_tool = db.Column(sa.String(64))
     is_indexable = db.Column(sa.Boolean, default=False)
 
     milling_geometry = db.relationship('MillingGeometry', back_populates='tool', uselist=False)
     turning_geometry = db.relationship('TurningGeometry', back_populates='tool', uselist=False)
     drill_geometry = db.relationship('DrillGeometry', back_populates='tool', uselist=False)
+    tap_geometry = db.relationship('TapGeometry', back_populates='tool', uselist=False)
     insert = db.relationship('Insert', back_populates='tool')
 
     experiments = db.relationship('Experiment', back_populates='tool')
@@ -98,6 +102,18 @@ class DrillGeometry(db.Model):
     transverse_edge_angle = db.Column(sa.Float)
 
     tool = db.relationship('Tool', back_populates='drill_geometry')
+
+
+class TapGeometry(db.Model):
+    __tablename__ = 'tap_geometry'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tool_id = db.Column(db.Integer, db.ForeignKey('tools.id'), unique=True, nullable=False)
+    thread_standard = db.Column(sa.String(64), nullable=False)
+    thread_diameter = db.Column(sa.Float, nullable=False)
+    pitch = db.Column(sa.Float, nullable=False)
+
+    tool = db.relationship('Tool', back_populates='tap_geometry')
 
 
 class Insert(db.Model):
@@ -318,3 +334,18 @@ class MaterialType(db.Model):
 
     def __repr__(self):
         return f'<MaterialType {self.name}>'
+
+
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(sa.String(64), unique=True, nullable=False, index=True)
+    password_hash = db.Column(sa.String(256), nullable=False)
+    role = db.Column(sa.String(16), nullable=False, default='reader', index=True)
+
+    def set_password(self, password: str) -> None:
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)

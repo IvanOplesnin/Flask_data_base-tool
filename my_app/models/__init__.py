@@ -13,12 +13,14 @@ from .entities import (
     MillingGeometry,
     RecommendationParameter,
     Tool,
+    TapGeometry,
     TurningGeometry,
     WearMeasurement,
+    User,
 )
 
 __all__ = [
     'Adhesive', 'Coating', 'Coefficient', 'CsvFile', 'DrillGeometry',
     'Experiment', 'Insert', 'MaterialType', 'Material', 'MillingGeometry',
-    'RecommendationParameter', 'Tool', 'TurningGeometry', 'WearMeasurement',
+    'RecommendationParameter', 'TapGeometry', 'Tool', 'TurningGeometry', 'User', 'WearMeasurement',
 ]

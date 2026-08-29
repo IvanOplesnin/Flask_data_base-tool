@@ -1,37 +1,16 @@
 {% extends 'base.html' %}
 
 {% block tittle %}
-<div style="text-align: center; margin-bottom: 16px;">
-    <h1>Выбор Материала и Инструмента</h1>
-</div>
-
-<form method="GET" action="/recommended_speed" style="margin: 20px auto; max-width: 400px; padding: 20px; border: 1px solid #ccc; border-radius: 10px;">
-    <label for="material" style="font-size: 16px; color: #333; margin-bottom: 10px; display: block;">Материалы:</label>
-    <select name="material_id" id="material" style="font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 20px;">
-        {% for material in unique_materials %}
-        <option value="{{ material.id }}">{{ material.name }}</option>
-        {% endfor %}
-    </select>
-
-    <label for="tool" style="font-size: 16px; color: #333; margin-bottom: 10px; display: block;">Инструменты:</label>
-    <select name="tool_id" id="tool" style="font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 20px;">
-        {% for tool in unique_tools %}
-        <option value="{{ tool.id }}">{{tool.name}}, {{ tool.name_easy }}</option>
-        {% endfor %}
-    </select>
-
-    <label for="coating" style="font-size: 16px; color: #333; margin-bottom: 10px; display: block;">Покрытия:</label>
-    <select name="coating_id" id="coating" style="font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 20px;">
-        <option value = None></option>
-        {% for coating in unique_coatings %}
-        <option value="{{ coating.id }}">{{ coating.name }}</option>
-        {% endfor %}
-    </select>
-
-    <input type="submit" value="Подтвердить" style="font-size: 16px; padding: 10px 20px; background-color: #007aff; color: #fff; border: none; border-radius: 5px; cursor: pointer;">
-</form>
-
-<div style="text-align: center;">
-    <a href="/recommended_speed" style="font-size: 16px; padding: 10px 20px; background-color: #007aff; color: #fff; border: none; border-radius: 5px; text-decoration: none; cursor: pointer;">Все рекомендуемые режимы</a>
-</div>
+<main class="container py-5">
+    <div class="text-center mb-5">
+        <h1>Выберите вид обработки</h1>
+        <p class="lead">Подберите материал, инструмент, покрытие и режимы резания.</p>
+    </div>
+    <div class="row g-4 justify-content-center">
+        <div class="col-md-4"><a class="btn btn-primary w-100 py-5 fs-3" href="{{ url_for('web.processing_selection', processing_type='turning') }}">Точение</a></div>
+        <div class="col-md-4"><a class="btn btn-success w-100 py-5 fs-3" href="{{ url_for('web.processing_selection', processing_type='milling') }}">Фрезерование</a></div>
+        <div class="col-md-4"><a class="btn btn-warning w-100 py-5 fs-3" href="{{ url_for('web.processing_selection', processing_type='threading') }}">Резьбонарезание</a></div>
+    </div>
+    <p class="text-center mt-5"><a href="{{ url_for('web.recommended_speed') }}">Все рекомендуемые режимы</a></p>
+</main>
 {% endblock %}

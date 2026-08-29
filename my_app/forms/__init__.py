@@ -8,9 +8,12 @@ from .forms import (
     MillingGeometryForm,
     ToolForm,
     TurningGeometryForm,
+    LoginForm,
+    UserForm,
+    TapForm,
 )
 
 __all__ = [
     'CoatingForm', 'DrillGeometryForm', 'ExperimentForm', 'MaterialForm',
-    'MillingGeometryForm', 'ToolForm', 'TurningGeometryForm',
+    'LoginForm', 'MillingGeometryForm', 'TapForm', 'ToolForm', 'TurningGeometryForm', 'UserForm',
 ]

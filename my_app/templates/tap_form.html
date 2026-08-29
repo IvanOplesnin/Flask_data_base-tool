@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block tittle %}
+<main class="container py-4" style="max-width: 650px;">
+  <h1>Добавить метчик</h1>
+  <form method="post">{{ form.hidden_tag() }}
+    <div class="mb-3">{{ form.name.label(class='form-label') }}{{ form.name(class='form-control') }}</div>
+    <div class="mb-3">{{ form.material_tool.label(class='form-label') }}{{ form.material_tool(class='form-control') }}</div>
+    <div class="mb-3">{{ form.thread_standard.label(class='form-label') }}{{ form.thread_standard(class='form-control') }}</div>
+    <div class="mb-3">{{ form.thread_diameter.label(class='form-label') }}{{ form.thread_diameter(class='form-control') }}</div>
+    <div class="mb-3">{{ form.pitch.label(class='form-label') }}{{ form.pitch(class='form-control') }}</div>
+    {{ form.submit(class='btn btn-primary') }}
+  </form>
+</main>
+{% endblock %}
