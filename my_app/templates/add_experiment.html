@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block tittle %}
+<div class="container mt-5">
+    <h1>Добавить эксперимент</h1>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <!-- Поля выбора материала, покрытия и инструмента в одной строке -->
+        <div class="row">
+            <div class="form-group col-md-4">
+                {{ form.material_id.label }}
+                {{ form.material_id(class="form-control") }}
+                {% for error in form.material_id.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <div class="form-group col-md-4">
+                {{ form.coating_id.label }}
+                {{ form.coating_id(class="form-control") }}
+                {% for error in form.coating_id.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <div class="form-group col-md-4">
+                {{ form.tool_id.label }}
+                {{ form.tool_id(class="form-control") }}
+                {% for error in form.tool_id.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <br>
+        <!-- Остальные поля в формате "Название поля: поле ввода" -->
+        <div class="form-group row">
+            <label class="col-sm-3 col-form-label">{{ form.spindle_speed.label }}</label>
+            <div class="col-sm-9">
+                {{ form.spindle_speed(class="form-control") }}
+                {% for error in form.spindle_speed.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-sm-3 col-form-label">{{ form.feed_table.label }}</label>
+            <div class="col-sm-9">
+                {{ form.feed_table(class="form-control") }}
+                {% for error in form.feed_table.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-sm-3 col-form-label">{{ form.depth_cut.label }}</label>
+            <div class="col-sm-9">
+                {{ form.depth_cut(class="form-control") }}
+                {% for error in form.depth_cut.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-sm-3 col-form-label">{{ form.width_cut.label }}</label>
+            <div class="col-sm-9">
+                {{ form.width_cut(class="form-control") }}
+                {% for error in form.width_cut.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-sm-3 col-form-label">{{ form.length_path.label }}</label>
+            <div class="col-sm-9">
+                {{ form.length_path(class="form-control") }}
+                {% for error in form.length_path.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-sm-3 col-form-label">{{ form.durability.label }}</label>
+            <div class="col-sm-9">
+                {{ form.durability(class="form-control") }}
+                {% for error in form.durability.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-sm-3 col-form-label">{{ form.date_conducted.label }}</label>
+            <div class="col-sm-9">
+                {{ form.date_conducted(class="form-control") }}
+                {% for error in form.date_conducted.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Таблица для ввода данных износа -->
+        <h3>Данные износа</h3>
+        <table class="table table-bordered" id="wear-table">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Длина пути (мм)</th>
+                    <th>Износ (мм)</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wear_form in form.wear_data %}
+                <tr id="wear-entry-{{ loop.index0 }}">
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        {{ wear_form.length(class="form-control") }}
+                        {% for error in wear_form.length.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {{ wear_form.wear(class="form-control") }}
+                        {% for error in wear_form.wear.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger remove-wear-entry" data-entry-id="{{ loop.index0 }}">Удалить</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-secondary" id="add-wear-entry">Добавить точку измерения износа</button>
+
+        <!-- Кнопка отправки формы -->
+        <div class="form-group mt-3">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+</div>
+
+<!-- JavaScript для управления динамическими полями -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(function() {
+        // Добавление новой записи износа
+        $('#add-wear-entry').click(function() {
+            var wearTableBody = $('#wear-table tbody');
+            var index = wearTableBody.children('tr').length;
+            var template = `
+                <tr id="wear-entry-${index}">
+                    <td>${index + 1}</td>
+                    <td>
+                        <input class="form-control" id="wear_data-${index}-length" name="wear_data-${index}-length" type="text">
+                    </td>
+                    <td>
+                        <input class="form-control" id="wear_data-${index}-wear" name="wear_data-${index}-wear" type="text">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger remove-wear-entry" data-entry-id="${index}">Удалить</button>
+                    </td>
+                </tr>
+            `;
+            wearTableBody.append(template);
+        });
+
+        // Удаление записи износа
+        $('#wear-table').on('click', '.remove-wear-entry', function() {
+            var entryId = $(this).data('entry-id');
+            $('#wear-entry-' + entryId).remove();
+            // Обновление нумерации оставшихся записей
+            updateWearEntryIndices();
+        });
+
+        function updateWearEntryIndices() {
+            $('#wear-table tbody tr').each(function(index) {
+                $(this).attr('id', 'wear-entry-' + index);
+                $(this).find('td:first').text(index + 1);
+                $(this).find('.remove-wear-entry').attr('data-entry-id', index);
+                $(this).find('input').each(function() {
+                    var name = $(this).attr('name');
+                    var newName = name.replace(/wear_data-\d+-/, 'wear_data-' + index + '-');
+                    $(this).attr('name', newName);
+                    var id = $(this).attr('id');
+                    var newId = id.replace(/wear_data-\d+-/, 'wear_data-' + index + '-');
+                    $(this).attr('id', newId);
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

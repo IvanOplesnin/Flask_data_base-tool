@@ -5,30 +5,30 @@
     <h1>Выбор Материала и Инструмента</h1>
 </div>
 
-<form method="POST" action="/recommended_speed" style="margin: 20px auto; max-width: 400px; padding: 20px; border: 1px solid #ccc; border-radius: 10px;">
-    <label for="material" style="font-size: 16px; color: #333; margin-bottom: 10px; display: block;">Material:</label>
-    <select name="material" id="material" style="font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 20px;">
+<form method="GET" action="/recommended_speed" style="margin: 20px auto; max-width: 400px; padding: 20px; border: 1px solid #ccc; border-radius: 10px;">
+    <label for="material" style="font-size: 16px; color: #333; margin-bottom: 10px; display: block;">Материалы:</label>
+    <select name="material_id" id="material" style="font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 20px;">
         {% for material in unique_materials %}
-        <option value="{{ material[0] }}">{{ material[0] }}</option>
+        <option value="{{ material.id }}">{{ material.name }}</option>
         {% endfor %}
     </select>
 
-    <label for="tool" style="font-size: 16px; color: #333; margin-bottom: 10px; display: block;">Tool:</label>
-    <select name="tool" id="tool" style="font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 20px;">
+    <label for="tool" style="font-size: 16px; color: #333; margin-bottom: 10px; display: block;">Инструменты:</label>
+    <select name="tool_id" id="tool" style="font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 20px;">
         {% for tool in unique_tools %}
-        <option value="{{ tool[0] }}">{{ tool[0] }}</option>
+        <option value="{{ tool.id }}">{{tool.name}}, {{ tool.name_easy }}</option>
         {% endfor %}
     </select>
 
-    <label for="coating" style="font-size: 16px; color: #333; margin-bottom: 10px; display: block;">Coating:</label>
-    <select name="coating" id="coating" style="font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 20px;">
+    <label for="coating" style="font-size: 16px; color: #333; margin-bottom: 10px; display: block;">Покрытия:</label>
+    <select name="coating_id" id="coating" style="font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 20px;">
         <option value = None></option>
         {% for coating in unique_coatings %}
-        <option value="{{ coating[0] }}">{{ coating[0] }}</option>
+        <option value="{{ coating.id }}">{{ coating.name }}</option>
         {% endfor %}
     </select>
 
-    <input type="submit" value="Submit" style="font-size: 16px; padding: 10px 20px; background-color: #007aff; color: #fff; border: none; border-radius: 5px; cursor: pointer;">
+    <input type="submit" value="Подтвердить" style="font-size: 16px; padding: 10px 20px; background-color: #007aff; color: #fff; border: none; border-radius: 5px; cursor: pointer;">
 </form>
 
 <div style="text-align: center;">

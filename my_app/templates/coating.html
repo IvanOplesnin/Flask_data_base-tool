@@ -22,8 +22,20 @@
         background-color: #f2f2f2; /* Цвет фона для заголовков */
     }
 </style>
+
 <div class="container mt-5">
     <h1> Таблица покрытий</h1>
+    <form method="GET" action="/coatings" class="form-inline mb-3">
+        <div class="form-group mr-2">
+            <input type="text" name="search_query" id="search_query" class="form-control"
+                   placeholder="Поиск по названию"
+                   value="{{ search_query }}">
+            <input type="text" name="type_application" id="type_application" class="form-control"
+                   placeholder="Поиск по способу покрытия"
+                   value="{{ type_application }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Найти</button>
+    </form>
     <table class="materials-table">
         <thead>
             <tr>
@@ -31,25 +43,30 @@
                 <th>Материал покрытия</th>
                 <th>Способ нанесения</th>
                 <th>Цвет</th>
-                <th>Максимальная толщина</th>
-                <th>Микротвердость</th>
-                <th>Тепмературная устойчивость</th>
+                <th>Максимальная толщина, мм</th>
+                <th>Микротвердость, HRC</th>
+                <th>Тепмературная устойчивость, &deg;С</th>
                 <th>Коэффициент трения</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
             {% for i in coatings %}
             <tr>
-                <td>{{ i.Name }}</td>
-                <td>{{ i.MaterialCoating }}</td>
-                <td>{{ i.TypeApplication }}</td>
-                <td>{{ i.ColorCoating }}</td>
-                <td>{{ i.MaxThickness }}</td>
-                <td>{{ i.NanoHardness }}</td>
-                <td>{{ i.TemratureResistance }}</td>
-                <td>{{ i.KoefficientFriction }}</td>
-                <td><a href="/coating/{{i.id}}/delete"  class="btn btn-warning">Удалить</a>
-                <a href="/coating/{{i.id}}/update"  class="btn btn-success">Изменить</a></td>
+                <td>{{ i.name }}</td>
+                <td>{{ i.material_coating }}</td>
+                <td>{{ i.type_application }}</td>
+                <td>{{ i.color_coating }}</td>
+                <td>{{ i.max_thickness }}</td>
+                <td>{{ i.nano_hardness }}</td>
+                <td>{{ i.temperature_resistance | int }}</td>
+                <td>{{ i.coefficient_friction }}</td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
+                        <a href="/coating/{{i.id}}/delete" class="btn btn-warning">Удалить</a>
+                        <a href="/coating/{{i.id}}/update" class="btn btn-success">Изменить</a>
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

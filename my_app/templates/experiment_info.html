@@ -7,15 +7,15 @@
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
             <div style="flex: 1;">
                 <h3 style="font-size: 24px; color: #333;">Материал</h3>
-                <p style="font-size: 18px; color: #666;">{{ experiment.mat_info.Name }}</p>
+                <p style="font-size: 18px; color: #666;">{{ experiment.material.name }}</p>
             </div>
             <div style="flex: 1;">
                 <h3 style="font-size: 24px; color: #333;">Инструмент</h3>
-                <p style="font-size: 18px; color: #666;">{{ experiment.tools_info.Name }}</p>
+                <p style="font-size: 18px; color: #666;">{{ experiment.tool.name }}</p>
             </div>
             <div style="flex: 1;">
                 <h3 style="font-size: 24px; color: #333;">Покрытие</h3>
-                <p style="font-size: 18px; color: #666;">{{ experiment.coat_info.Name }}</p>
+                <p style="font-size: 18px; color: #666;">{{ experiment.coating.name }}</p>
             </div>
         </div>
 
@@ -23,44 +23,50 @@
             <h2 style="font-size: 30px; color: #333;">Параметры Эксперимента</h2>
             <table style="width: 100%; margin-top: 20px;">
                 <tr>
-                    <th style="font-size: 20px; color: #333;">Обороты Шпинделя</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.SpindleSpeed }}</td>
+                    <th style="font-size: 20px; color: #333;">Обороты Шпинделя, об/мин</th>
+                    <td style="font-size: 20px; color: #666;">{{ experiment.spindle_speed | int }}</td>
                 </tr>
                 <tr>
-                    <th style="font-size: 20px; color: #333;">Подача Стола</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.FeedTable }}</td>
+                    <th style="font-size: 20px; color: #333;">Подача Стола, мм/мин</th>
+                    <td style="font-size: 20px; color: #666;">{{ experiment.feed_table | int }}</td>
                 </tr>
                 <tr>
-                    <th style="font-size: 20px; color: #333;">Глубина фрезерования</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.DepthCut }}</td>
+                    <th style="font-size: 20px; color: #333;">Глубина фрезерования, мм</th>
+                    <td style="font-size: 20px; color: #666;">{{ experiment.depth_cut }}</td>
                 </tr>
                 <tr>
-                    <th style="font-size: 20px; color: #333;">Ширина фрезерования</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.WidthCut }}</td>
+                    <th style="font-size: 20px; color: #333;">Ширина фрезерования, мм</th>
+                    <td style="font-size: 20px; color: #666;">{{ experiment.width_cut }}</td>
                 </tr>
                 <tr>
-                    <th style="font-size: 20px; color: #333;">Длина пути резания</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.LengthPath }}</td>
+                    <th style="font-size: 20px; color: #333;">Длина пути резания, мм</th>
+                    <td style="font-size: 20px; color: #666;">{{ experiment.length_path | round(2) }}</td>
                 </tr>
                 <tr>
-                    <th style="font-size: 20px; color: #333;">Стойкость инстурмента</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.Durability }}</td>
+                    <th style="font-size: 20px; color: #333;">Стойкость инстурмента, мин</th>
+                    <td style="font-size: 20px; color: #666;">{{ experiment.durability | round(2) }}</td>
                 </tr>
                 <tr>
-                    <th style="font-size: 20px; color: #333;">Скорость резания</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.CutterSpeed }}</td>
+                    <th style="font-size: 20px; color: #333;">Скорость резания, м/мин</th>
+                    <td style="font-size: 20px; color: #666;">{{ experiment.cutter_speed | round(2) }}</td>
                 </tr>
                 <tr>
-                    <th style="font-size: 20px; color: #333;">Подача на Зуб</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.FeedOfTeeth }}</td>
+                    <th style="font-size: 20px; color: #333;">Подача на Зуб, мм</th>
+                    <td style="font-size: 20px; color: #666;">{{ experiment.feed_of_teeth | round(3)}}</td>
                 </tr>
             </table>
         </div>
     </div>
+    <iframe
+        src="/dash_wear_info/?experiment_id={{ experiment.id }}"
+        width="100%"
+        height="500"
+        style="border:none;"
+    ></iframe>
     <div style="text-align: center; margin-top: 20px;">
         <h2 style="font-size: 30px; color: #333;">Графики зависимости тангенциальной составляющей и температуры резания от пройденного пути</h2>
-        <img src="{{ url_for('static', filename=experiment.csv_f.path_graphik_s) }}" alt="График Сил" style="display: block; margin: 0 auto;">
-        <img src="{{ url_for('static', filename=experiment.csv_f.path_graphik_t) }}" alt="График Температуры" style="display: block; margin: 20px auto;">
+        <img src="{{ url_for('static', filename=experiment.csv_file.path_graphic_s) }}" alt="График Сил" style="display: block; margin: 0 auto;">
+        <img src="{{ url_for('static', filename=experiment.csv_file.path_graphic_t) }}" alt="График Температуры" style="display: block; margin: 20px auto;">
     </div>
 </div>
 {% endblock %}

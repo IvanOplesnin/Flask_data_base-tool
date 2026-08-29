@@ -1,50 +1,137 @@
 {% extends 'base.html' %}
 
 {% block tittle %}
-<style>
-    h1 {
-        font-size: 24px;
-    }
-    h2 {
-        font-size: 16px;
-    }
-    .materials-table {
-        width: 100%; /* Ширина таблицы на 100% */
-        border-collapse: collapse; /* Объединяем границы ячеек */
-    }
 
-    .materials-table th, .materials-table td {
-        border: 1px solid #ccc; /* Границы ячеек и заголовков */
-        padding: 8px; /* Отступы внутри ячеек */
-    }
-
-    .materials-table th {
-        background-color: #f2f2f2; /* Цвет фона для заголовков */
-    }
-</style>
 <div class="container mt-5">
-    <h1> Таблица материалов </h1>
-    <table class="materials-table">
-        <thead>
+    <h1>Информация об инструменте</h1>
+    <table class="table table-bordered">
+        <tr>
+            <th>Название инструмента</th>
+            <td>{{ tool.name }} ({{ tool.name_easy }})</td>
+        </tr>
+        <tr>
+            <th>Материал инструмента</th>
+            <td>{{ tool.material_tool }}</td>
+        </tr>
+        <tr>
+            <th>Тип инструмента</th>
+            <td>{{ tool.tool_type }}</td>
+        </tr>
+        <tr>
+            <th>Режущие пластины</th>
+            <td>
+                {% if tool.is_indexable %}
+                    {{ tool.index.inserts }}
+                {% else %}
+                    Цельный инструмент
+                {% endif %}
+            </td>
+        </tr>
+        <!-- Добавим информацию о геометрии инструмента -->
+        {% if tool.tool_type == 'milling' and tool.milling_geometry %}
             <tr>
-                <th>Название материала</th>
-                <th>Материал инструмента</th>
-                <th>Количесвто зубьев</th>
-                <th>Диаметр, мм</th>
+                <th colspan="2" class="text-center">Геометрия фрезы</th>
             </tr>
-        </thead>
-        <tbody>
             <tr>
-                <td>{{ tool.Name }}</td>
-                <td>{{ tool.MaterialTool }}</td>
-                <td>{{ tool.NumberTeeth }}</td>
-                <td>{{ tool.Diameter }} </td>
-                <td><a href="/tool/{{tool.id}}/delete"  class="btn btn-warning">Удалить</a>
-                <a href="/tool/{{tool.id}}/update"  class="btn btn-success">Изменить</a>
-                </td>
+                <th>Тип фрезы</th>
+                <td>{{ tool.milling_geometry.type_milling }}</td>
             </tr>
-        </tbody>
+            <tr>
+                <th>Диаметр, d</th>
+                <td>{{ tool.milling_geometry.diameter }} мм</td>
+            </tr>
+            <tr>
+                <th>Диаметр хвостовика, d<sub>m</sub></th>
+                <td>{{ tool.milling_geometry.diameter_shank }} мм</td>
+            </tr>
+            <tr>
+                <th>Тип хвостовика</th>
+                <td>{{ tool.milling_geometry.type_shank }}</td>
+            </tr>
+            <tr>
+                <th>Длина, L</th>
+                <td>{{ tool.milling_geometry.length }} мм</td>
+            </tr>
+            <tr>
+                <th>Рабочая длина L<sub>p</sub></th>
+                <td>{{ tool.milling_geometry.length_work }} мм</td>
+            </tr>
+            <tr>
+                <th>Количество зубьев z</th>
+                <td>{{ tool.milling_geometry.number_teeth }}</td>
+            </tr>
+            <tr>
+                <th>Угол наклона стружечных канавок</th>
+                <td>{{ tool.milling_geometry.spiral_angle }}°</td>
+            </tr>
+        {% elif tool.tool_type == 'turning' and tool.turning_geometry %}
+            <tr>
+                <th colspan="2" class="text-center">Геометрия токарного инструмента</th>
+            </tr>
+            <tr>
+                <th>Тип резца</th>
+                <td>{{ tool.turning_geometry.turning_type }}</td>
+            </tr>
+            <tr>
+                <th>Передний угол</th>
+                <td>{{ tool.turning_geometry.front_angle }}°</td>
+            </tr>
+            <tr>
+                <th>Главный задний угол</th>
+                <td>{{ tool.turning_geometry.main_rear_angle }}°</td>
+            </tr>
+            <tr>
+                <th>Угол заточки</th>
+                <td>{{ tool.turning_geometry.sharpening_angle }}°</td>
+            </tr>
+            <tr>
+                <th>Угол резания</th>
+                <td>{{ tool.turning_geometry.cutting_angle }}°</td>
+            </tr>
+            <tr>
+                <th>Вспомогательный задний угол</th>
+                <td>{{ tool.turning_geometry.aux_rear_angle }}°</td>
+            </tr>
+        {% elif tool.tool_type == 'drill' and tool.drill_geometry %}
+            <tr>
+                <th colspan="2" class="text-center">Геометрия сверла</th>
+            </tr>
+            <tr>
+                <th>Тип сверла</th>
+                <td>{{ tool.drill_geometry.drill_type }}</td>
+            </tr>
+            <tr>
+                <th>Диаметр</th>
+                <td>{{ tool.drill_geometry.diameter }} мм</td>
+            </tr>
+            <tr>
+                <th>Угол при вершине</th>
+                <td>{{ tool.drill_geometry.top_angle }}°</td>
+            </tr>
+            <tr>
+                <th>Угол винтовой линии</th>
+                <td>{{ tool.drill_geometry.screw_angle }}°</td>
+            </tr>
+            <tr>
+                <th>Передний угол</th>
+                <td>{{ tool.drill_geometry.front_angle }}°</td>
+            </tr>
+            <tr>
+                <th>Задний угол</th>
+                <td>{{ tool.drill_geometry.rear_angle }}°</td>
+            </tr>
+            <tr>
+                <th>Угол поперечной кромки</th>
+                <td>{{ tool.drill_geometry.transverse_edge_angle }}°</td>
+            </tr>
+        {% endif %}
+        <!-- Действия -->
+        <tr>
+            <td colspan="2" class="text-center">
+                <a href="/tool/{{ tool.id }}/delete" class="btn btn-warning">Удалить</a>
+                <a href="/tool/{{ tool.id }}/update" class="btn btn-success">Изменить</a>
+            </td>
+        </tr>
     </table>
 </div>
 {% endblock %}
-

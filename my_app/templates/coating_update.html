@@ -6,35 +6,44 @@
         font-size: 24px;
     }
 </style>
-<div class="container mt-5">
+<div class="container container-lg">
     <h1>Износостойкое покрытие</h1>
-    <form method="post", class = row>
-        <div class="col">
-            <input type="text" name="Name1" id="Name1" value="{{ coating.Name }}" class="form-control" placeholder="Название покрытия">
+    <form method="POST">
+        {{ coating_form.hidden_tag() }}
+        <div class="form-group col-md">
+            {{ coating_form.name.label(class="form-control-label") }}
+            {{ coating_form.name(class="form-control", value= coating.name) }}
+        </div>
+        <div class="form-group col-md">
+            {{ coating_form.material_coating.label(class="form-control-label") }}
+            {{ coating_form.material_coating(class="form-control", value= coating.material_coating) }}
+        </div>
+        <div class="form-group col-md">
+            {{ coating_form.type_application.label(class="form-control-label") }}
+            {{ coating_form.type_application(class="form-control", value= coating.type_application) }}
+        </div>
+        <div class="form-group col-md">
+            {{ coating_form.max_thickness.label(class="form-control-label") }}
+            {{ coating_form.max_thickness(class="form-control", value= coating.max_thickness) }}
+        </div>
+        <div class="form-group col-md">
+            {{ coating_form.nanohardness.label(class="form-control-label") }}
+            {{ coating_form.nanohardness(class="form-control", value= coating.nano_hardness) }}
+        </div>
+        <div class="form-group col-md">
+            {{ coating_form.temperature_resistance.label(class="form-control-label") }}
+            {{ coating_form.temperature_resistance(class="form-control", value= coating.temperature_resistance) }}
+        </div>
+        <div class="form-group col-md">
+            {{ coating_form.koefficient_friction.label(class="form-control-label") }}
+            {{ coating_form.koefficient_friction(class="form-control", value= coating.coefficient_friction) }}
+        </div>
+        <div class="form-group col-md">
+            {{ coating_form.color_coating.label(class="form-control-label") }}
+            {{ coating_form.color_coating(class="form-control",  value = coating.color_coating) }}
         </div>
         <div class="col">
-            <input type="text" name="Name2" id="Name2" value="{{ coating.MaterialCoating }}" class="form-control" placeholder="Химический состав">
-        </div>
-        <div class="col">
-            <input type="text" name="Name3" id="Name3" value="{{ coating.TypeApplication }}" class="form-control" placeholder="Тип нанаесения">
-        </div>
-        <div class="col">
-            <input type="text" name="Color" id="Color" value="{{ coating.ColorCoating }}" class="form-control" placeholder="Цвет">
-        </div>
-        <div class="col">
-            <input type="text" name="Name4" id="Name4" value="{{ coating.MaxThickness }}" class="form-control" placeholder="Максимальная толщина">
-        </div>
-        <div class="col">
-            <input type="text" name="NameNano" id="NameNano" value="{{ coating.NanoHardness }}" class="form-control" placeholder="Микротвердость">
-        </div>
-        <div class="col">
-            <input type="text" name="NameResistnce" id="NameResistnce" value="{{ coating.TemratureResistance }}" class="form-control" placeholder="Температурное устойчивость">
-        </div>
-        <div class="col">
-            <input type="text" name="NameKoef" id="NameKoef" value="{{ coating.KoefficientFriction }}" class="form-control" placeholder="Коэффициент трения">
-        </div>
-        <div class="col">
-            <input type="submit" name = 'Button_2' class="btn btn-success" value="Подтвердить изменения">
+            {{ coating_form.submit(class="btn btn-success", value = "Изменить") }}
         </div>
     </form>
 </div><br>

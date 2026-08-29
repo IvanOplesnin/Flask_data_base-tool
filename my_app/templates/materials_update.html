@@ -6,26 +6,40 @@
         font-size: 24px;
     }
 </style>
-<div class="container mt-5">
+<div class="container container-lg">
     <h1>Обрабатываемый материал</h1>
-    <form method="post", class = row>
-        <div class="col">
-            <input type="text" name="Name" id="Name" value="{{materials.Name}}" class="form-control" placeholder="Название материала">
+    <form method="post">
+        {{ material_form.hidden_tag()}}
+        <div class="form-group col-md">
+            {{ material_form.name.label(class="form-control-label") }}
+            {{ material_form.name(class="form-control", value= material.name) }}
         </div>
-        <div class="col">
-            <input type="text" name="NameP" id="NameP" value="{{materials.PropPhysics}}" class="form-control" placeholder="Физические свойства">
+        <div class="form-group col-md">
+            {{ material_form.prop_physics.label(class="form-control-label") }}
+            {{ material_form.prop_physics(class="form-control", value= material.prop_physics) }}
         </div>
-        <div class="col">
-            <input type="text" name="NameX" id="NameX" value="{{materials.Structure}}" class="form-control" placeholder="Химический состав">
+        <div class="form-group col-md">
+            {{ material_form.structure.label(class="form-control-label") }}
+            {{ material_form.structure(class="form-control", value= material.structure) }}
         </div>
-        <div class="col">
-            <input type="text" name="NamePr" id="NamePr" value="{{materials.Properties}}" class="form-control" placeholder="Свойства">
+        <div class="form-group col-md">
+            {{ material_form.properties.label(class="form-control-label") }}
+            {{ material_form.properties(class="form-control", value= material.properties) }}
         </div>
-        <div class="col">
-            <input type="text" name="NameGost" id="NameGost" value="{{materials.Gost}}" class="form-control" placeholder="Свойства">
+        <div class="form-group col-md">
+            {{ material_form.gost.label(class="form-control-label") }}
+            {{ material_form.gost(class="form-control", value= material.gost) }}
         </div>
-        <div class="col">
-            <input type="submit" name = 'Button_1' class="btn btn-success" value="Подтвердить изменения">
+        <div class="form-group col-md">
+            {{ material_form.type_id.label(class="form-control-label") }}
+            {{ material_form.type_id(class="form-control") }}
+        </div>
+        <div class="form-group col-md">
+            {{ material_form.new_type.label(class="form-control-label") }}
+            {{ material_form.new_type(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ material_form.submit(class="btn btn-success", value = "Изменить") }}
         </div>
     </form>
 </div><br>

@@ -1,29 +1,67 @@
 {% extends 'base.html' %}
 
 {% block tittle %}
-<style>
-    h1 {
-        font-size: 24px;
-    }
-</style>
 <div class="container mt-5">
-    <h1>Режущий инстурмент</h1>
-    <form method="post", class = row>
-        <div class="col">
-            <input type="text" name="Name5" id="Name5" value="{{tool.Name}}" class="form-control" placeholder="Название инструмента">
+    <h1>Редактирование инструмента</h1>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <!-- Основные параметры инструмента -->
+        <div class="form-group">
+            {{ form.name.label }}
+            {{ form.name(class="form-control") }}
+            {% for error in form.name.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
         </div>
-        <div class="col">
-            <input type="text" name="Name6" id="Name6" value="{{tool.MaterialTool}}" class="form-control" placeholder="Материал инструмента">
+
+        <div class="form-group">
+            {{ form.name_easy.label }}
+            {{ form.name_easy(class="form-control") }}
+            {% for error in form.name_easy.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
         </div>
-        <div class="col">
-            <input type="text" name="Name8" id="Name8" value="{{tool.NumberTeeth}}" class="form-control" placeholder="Количество зубьев">
+
+        <div class="form-group">
+            {{ form.material_tool.label }}
+            {{ form.material_tool(class="form-control") }}
+            {% for error in form.material_tool.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
         </div>
-        <div class="col">
-            <input type="text" name="Name9" id="Name9" value="{{tool.Diameter}}" class="form-control" placeholder="Диаметр фрезы">
+
+        <!-- Тип инструмента (неизменяемый) -->
+        <div class="form-group">
+            <label>Тип инструмента</label>
+            <input type="text" class="form-control" value="{% if tool.tool_type == 'milling' %}Фреза{% elif tool.tool_type == 'turning' %}Токарный инструмент{% elif tool.tool_type == 'drilling' %}Сверло{% else %}{{ tool.tool_type }}{% endif %}" readonly>
         </div>
-        <div class="col">
-            <input type="submit" name = 'Button_3' class="btn btn-success" value="Подтвердить изменения">
+
+        <div class="form-group form-check">
+            {{ form.is_indexable(class="form-check-input") }}
+            {{ form.is_indexable.label(class="form-check-label") }}
+            {% for error in form.is_indexable.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
         </div>
+
+        <!-- Поля геометрии инструмента -->
+        <h3>Геометрия инструмента</h3>
+        {% for field in form %}
+            {% if field.name not in ['csrf_token', 'name', 'name_easy', 'material_tool', 'tool_type', 'is_indexable', 'submit'] %}
+                <div class="form-group">
+                    {{ field.label }}
+                    {{ field(class="form-control") }}
+                    {% for error in field.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Кнопки действий -->
+        {{ form.submit(class="btn btn-primary") }}
+        <a href='/tool/{{tool.id}}/info' class="btn btn-secondary">Отмена</a>
     </form>
-</div><br>
+</div>
 {% endblock %}

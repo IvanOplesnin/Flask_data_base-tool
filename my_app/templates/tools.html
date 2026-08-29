@@ -1,51 +1,131 @@
 {% extends 'base.html' %}
 
+
 {% block tittle %}
 <style>
-    h1 {
-        font-size: 24px;
+    .tool-table {
+        width: 100%;
+        border-collapse: collapse;
     }
-    h2 {
-        font-size: 16px;
+    .tool-table th, .tool-table td {
+        border: 1px solid #ccc;
+        padding: 8px;
     }
-    .materials-table {
-        width: 100%; /* Ширина таблицы на 100% */
-        border-collapse: collapse; /* Объединяем границы ячеек */
+    .tool-table th {
+        background-color: #f2f2f2;
     }
-
-    .materials-table th, .materials-table td {
-        border: 1px solid #ccc; /* Границы ячеек и заголовков */
-        padding: 8px; /* Отступы внутри ячеек */
+    .details-row {
+        display: none;
     }
-
-    .materials-table th {
-        background-color: #f2f2f2; /* Цвет фона для заголовков */
+    .expand-button {
+        cursor: pointer;
+        color: blue;
+        text-decoration: underline;
     }
 </style>
+
 <div class="container mt-5">
-    <h1> Таблица инструментов</h1>
-    <table class="materials-table">
+    <h1>Таблица инструментов</h1>
+
+    <!-- Форма фильтрации и поиска -->
+    <form method="GET" action="/tools" class="form-inline mb-3">
+        <div class="form-group mr-2">
+            <label for="tool_type">Тип инструмента:</label>
+            <select name="tool_type" id="tool_type" class="form-control ml-2">
+                <option value="all" {% if selected_tool_type==
+                'all' %}selected{% endif %}>Все</option>
+                <option value="milling" {% if selected_tool_type==
+                'milling' %}selected{% endif %}>Фреза</option>
+                <option value="turning" {% if selected_tool_type==
+                'turning' %}selected{% endif %}>Токарный инструмент</option>
+                <option value="drilling" {% if selected_tool_type==
+                'drilling' %}selected{% endif %}>Сверло</option>
+            </select>
+        </div>
+        <div class="form-group mr-2">
+            <input type="text" name="search_query" id="search_query" class="form-control"
+                   placeholder="Поиск по названию"
+                   value="{{ search_query }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Найти</button>
+    </form>
+
+    <!-- Таблица инструментов -->
+    <table class="tool-table">
         <thead>
-            <tr>
-                <th>Инструмент</th>
-                <th>Материал инструмента</th>
-                <th>Количество зубьев</th>
-                <th>Диаметр фрезы</th>
-            </tr>
+        <tr>
+            <th>Название инструмента</th>
+            <th>Материал инструмента</th>
+            <th>Режущие пластины</th>
+            <th>Действия</th>
+        </tr>
         </thead>
         <tbody>
-            {% for i in tools %}
-            <tr>
-                <td>{{ i.Name }}</td>
-                <td>{{ i.MaterialTool }}</td>
-                <td>{{ i.NumberTeeth }}</td>
-                <td>{{ i.Diameter }}</td>
-                <td><a href="/tool/{{i.id}}/delete"  class="btn btn-warning">Удалить</a>
-                <a href="/tool/{{i.id}}/update"  class="btn btn-success">Изменить</a>
-                </td>
-            </tr>
-            {% endfor %}
+        {% for tool in tools %}
+        <tr>
+            <td>
+                    <span class="expand-button" onclick="toggleDetails({{ tool.id }})">
+                        {{ tool.name }}{% if tool.name_easy %} ({{ tool.name_easy }}){% endif %}
+                    </span>
+            </td>
+            <td>{{ tool.material_tool }}</td>
+            <td>
+                {% if tool.is_indexable %}
+                    {% for insert in tool.insert %}{{ insert.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                {% else %}
+                    Цельный инстурмент
+                {% endif %}
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
+                    <a href="/tool/{{ tool.id }}/delete" class="btn btn-warning">Удалить</a>
+                    <a href="/tool/{{ tool.id }}/update" class="btn btn-success">Изменить</a>
+                </div>
+            </td>
+        </tr>
+        <!-- Детали инструмента -->
+        <tr id="details-{{ tool.id }}" class="details-row">
+            <td {% if tool.tool_type =='milling' %}colspan="4"{% else %} colspan="3" {% endif %}>
+                {% if tool.tool_type == 'milling' and tool.milling_geometry %}
+                    <strong>Диаметр, d:</strong> {{ tool.milling_geometry.diameter }} мм<br>
+                    <strong>Диаметр хвостовика, d<sub>m</sub>:</strong> {{ tool.milling_geometry.diameter_shank }} мм<br>
+                    <strong>Тип хвостовика, d<sub>m</sub>:</strong> {{ tool.milling_geometry.type_shank }}<br>
+                    <strong>Длина, L:</strong> {{ tool.milling_geometry.length }} мм<br>
+                    <strong>Рабочая длина L<sub>p</sub>:</strong> {{ tool.milling_geometry.length_work }} мм<br>
+                    <strong>Количество зубьев z:</strong> {{ tool.milling_geometry.number_teeth }}<br>
+                    <strong>Угол наклона стружечных канавок:</strong> {{ tool.milling_geometry.spiral_angle }}<br>
+                {% elif tool.tool_type == 'turning' and tool.turning_geometry %}
+                    <strong>Тип резца:</strong> {{ tool.turning_geometry.turning_type }}<br>
+                    <strong>Передний угол:</strong> {{ tool.turning_geometry.front_angle }}°<br>
+                    <strong>Главный задний угол:</strong> {{ tool.turning_geometry.main_rear_angle }}°<br>
+                    <strong>Угол заточки:</strong> {{ tool.turning_geometry.sharpening_angle }}°<br>
+                    <strong>Угол резания:</strong> {{ tool.turning_geometry.cutting_angle }}°<br>
+                    <strong>Вспомогательный задний угол:</strong> {{ tool.turning_geometry.aux_rear_angle }}°<br>
+                {% elif tool.tool_type == 'drilling' and tool.drill_geometry %}
+                    <strong>Тип сверла:</strong> {{ tool.drill_geometry.drill_type }}<br>
+                    <strong>Диаметр:</strong> {{ tool.drill_geometry.diameter }} мм<br>
+                    <strong>Угол при вершине:</strong> {{ tool.drill_geometry.top_angle }}°<br>
+                    <strong>Угол винтовой линии:</strong> {{ tool.drill_geometry.screw_angle }}°<br>
+                    <strong>Передний угол:</strong> {{ tool.drill_geometry.front_angle }}°<br>
+                    <strong>Задний угол:</strong> {{ tool.drill_geometry.rear_angle }}°<br>
+                    <strong>Угол поперечной кромки:</strong> {{ tool.drill_geometry.transverse_edge_angle }}°<br>
+                {% endif %}<br>
+            </td>
+        </tr>
+        {% endfor %}
         </tbody>
     </table>
 </div>
+
+<!-- JavaScript для управления раскрытием деталей -->
+<script>
+    function toggleDetails(toolId) {
+        var detailsRow = document.getElementById('details-' + toolId);
+        if (detailsRow.style.display === 'none' || detailsRow.style.display === '') {
+            detailsRow.style.display = 'table-row';
+        } else {
+            detailsRow.style.display = 'none';
+        }
+    }
+</script>
 {% endblock %}

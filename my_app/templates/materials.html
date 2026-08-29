@@ -12,19 +12,40 @@
         width: 100%; /* Ширина таблицы на 100% */
         border-collapse: collapse; /* Объединяем границы ячеек */
     }
-
     .materials-table th, .materials-table td {
         border: 1px solid #ccc; /* Границы ячеек и заголовков */
         padding: 8px; /* Отступы внутри ячеек */
     }
-
     .materials-table th {
         background-color: #f2f2f2; /* Цвет фона для заголовков */
     }
 </style>
 <div class="container mt-5">
     <h1> Таблица материалов </h1>
-    <table class="materials-table">
+
+    <!-- Форма фильтрации и поиска -->
+    <form method="GET" action="/materials" class="form-control" style="margin: 10px">
+        <div class="form-group mr-2" style="margin: 10px">
+            <div class="input-group input-group-sm" style="margin: 10px">
+                <label for="type_id" style="margin-right: 10px">Тип материала:</label>
+                <select name="type_id" id="type_id" class="form-control ml-2">
+                    <option value="all" {% if selected_type_id == 'all' %}selected{% endif %}>Все</option>
+                    {% for type in material_types %}
+                    <option value="{{ type.id }}" {% if selected_type_id == type.id|string %}selected{% endif %}>{{ type.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group mr-2">
+                <input type="text" name="search_query" id="search_query" class="form-control form-control-sm" placeholder="Поиск по названию"
+                       value="{{ search_query }}">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin: 10px">Найти</button>
+        </div>
+    </form>
+
+    <!-- Таблица материалов -->
+    <table class="materials-table" style="margin: 10px">
         <thead>
             <tr>
                 <th>Название материала</th>
@@ -32,24 +53,71 @@
                 <th>Химический состав</th>
                 <th>Свойства</th>
                 <th>Гост</th>
-
+                <th>Действия</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="materials-body">
             {% for i in materials %}
             <tr>
-                <td>{{ i.Name }}</td>
-                <td>{{ i.PropPhysics }}</td>
-                <td>{{ i.Structure }}</td>
-                <td>{{ i.Properties }} </td>
-                <td>{{ i.Gost }} </td>
-                <td><a href="/materials/{{i.id}}/delete"  class="btn btn-warning">Удалить</a>
-                <a href="/materials/{{i.id}}/update"  class="btn btn-success">Изменить</a>
+                <td>{{ i.name }}</td>
+                <td>{{ i.prop_physics }}</td>
+                <td>{{ i.structure }}</td>
+                <td>{{ i.properties }}</td>
+                <td>{{ i.gost }}</td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
+                        <a href="/materials/{{i.id}}/delete" class="btn btn-warning">Удалить</a>
+                        <a href="/materials/{{i.id}}/update" class="btn btn-success">Изменить</a>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
-{% endblock %}
 
+<!-- JavaScript для автозаполнения и динамического обновления -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    var searchInput = document.getElementById('search_query');
+    var typeSelect = document.getElementById('type_id'); // Получаем выпадающий список типов материалов
+
+    // Добавляем обработчик ввода в поле поиска и изменения в выпадающем списке
+    searchInput.addEventListener('input', updateMaterials);
+    typeSelect.addEventListener('change', updateMaterials);
+
+    function updateMaterials() {
+        var query = searchInput.value;
+        var typeId = typeSelect.value;
+
+        // Отправляем AJAX-запрос на сервер
+        fetch(`/materials/search?search_query=${query}&type_id=${typeId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Очищаем текущую таблицу
+                var tbody = document.getElementById('materials-body');
+                tbody.innerHTML = '';
+
+                // Добавляем новые строки в таблицу
+                data.forEach(material => {
+                    var row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${material.name}</td>
+                        <td>${material.prop_physics}</td>
+                        <td>${material.structure}</td>
+                        <td>${material.properties}</td>
+                        <td>${material.gost}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
+                                <a href="/materials/${material.id}/delete" class="btn btn-warning">Удалить</a>
+                                <a href="/materials/${material.id}/update" class="btn btn-success">Изменить</a>
+                            </div>
+                        </td>
+                        `;
+                    tbody.appendChild(row);
+                    });
+                });
+        }
+    });
+</script>
+{% endblock %}

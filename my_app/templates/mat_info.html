@@ -27,6 +27,7 @@
     <table class="materials-table">
         <thead>
             <tr>
+                <th>Тип материала</th>
                 <th>Название материала</th>
                 <th>Физические свойства</th>
                 <th>Химический состав</th>
@@ -36,11 +37,12 @@
         </thead>
         <tbody>
             <tr>
-                <td>{{ material.Name }}</td>
-                <td>{{ material.PropPhysics }}</td>
-                <td>{{ material.Structure }}</td>
-                <td>{{ material.Properties }} </td>
-                <td>{{ material.Gost }} </td>
+                <td>{{ material.material_type.name }}</td>
+                <td>{{ material.name }}</td>
+                <td>{{ material.prop_physics }}</td>
+                <td>{{ material.structure }}</td>
+                <td>{{ material.properties }} </td>
+                <td>{{ material.gost }} </td>
                 <td><a href="/materials/{{material.id}}/delete"  class="btn btn-warning">Удалить</a>
                 <a href="/materials/{{material.id}}/update"  class="btn btn-success">Изменить</a>
                 </td>

@@ -22,55 +22,58 @@
         background-color: #f2f2f2; /* Цвет фона для заголовков */
     }
 </style>
-<div class="container mt-5">
+<div class="container-sm">
+    <div class="row">
+        <a class="btn btn-primary" type="submit" href="/experiment/add">Добавить эксперимент</a>
+    </div>
     <h1> Таблица материалов </h1>
     <form method="get" action="{{ url_for('experiments_table') }}">
-        <input type="text" name="material" placeholder="Фильтр по материалу" value="{{ request_args.get('material', '') }}">
-        <input type="text" name="coating" placeholder="Фильтр по покрытию" value="{{ request_args.get('coating', '') }}">
-        <input type="number" name="spindle_min" placeholder="Мин обороты шпинделя" value="{{ request_args.get('spindle_min', '') }}">
-        <input type="number" name="spindle_max" placeholder="Макс обороты шпинделя" value="{{ request_args.get('spindle_max', '') }}">
-        <input type="number" name="feed_min" placeholder="Мин подача" value="{{ request_args.get('feed_min', '') }}">
-        <input type="number" name="feed_max" placeholder="Макс подача" value="{{ request_args.get('feed_max', '') }}">
-        <button type="submit">Фильтровать</button>
+        <div class="input-group mb-3">
+            <input class="form-control" type="text" name="material" placeholder="Фильтр по материалу" value="{{ request_args.get('material', '') }}">
+            <input class="form-control" type="text" name="coating" placeholder="Фильтр по покрытию" value="{{ request_args.get('coating', '') }}">
+            <input class="form-control" type="number" name="spindle_min" placeholder="Мин обороты шпинделя" value="{{ request_args.get('spindle_min', '') }}">
+            <input class="form-control" type="number" name="spindle_max" placeholder="Макс обороты шпинделя" value="{{ request_args.get('spindle_max', '') }}">
+            <input class="form-control" type="number" name="feed_min" placeholder="Мин подача" value="{{ request_args.get('feed_min', '') }}">
+            <input class="form-control" type="number" name="feed_max" placeholder="Макс подача" value="{{ request_args.get('feed_max', '') }}">
+            <button class = "btn btn-success" type="submit">Фильтровать</button>
+        </div>
     </form>
-    <table class="materials-table">
+    <table class="table table-primary table-striped-columns">
         <thead>
             <tr>
                 <th>Обрабатываемый материал</th>
                 <th>Инструмент</th>
                 <th>Износостойкое покрытие</th>
-                <th>
-                    <a href="{{ url_for('experiments_table', sort_by='SpindleSpeed', order='asc' if request_args.get('order') == 'desc' else 'desc', **request_args) }}">
-                        Обороты шпинделя(n), об/мин
-                    </a>
-                </th>
-                <th>
-                    <a href="{{ url_for('experiments_table', sort_by='FeedTable', order='asc' if request_args.get('order') == 'desc' else 'desc', **request_args) }}">
-                        Подача(s), мм/мин
-                    </a>
-                </th>
+                <th>Обороты шпинделя(n), об/мин</th>
+                <th>Подача(s), мм/мин</th>
                 <th>Пройденная длина обработки(L), мм</th>
                 <th>Стойкость инструмента(T), мин</th>
+                <th>Действия</th>
             </tr>
         </thead>
         <tbody>
             {% for i in experiment %}
             <tr>
-                <td><a href="/material/{{i.mat_info.id}}/info">{{ i.Material }}</a></td>
-                <td>{{ i.Tool }}</td>
-                <td>{{ i.Coating }}</td>
-                <td>{{ i.SpindleSpeed }}</td>
-                <td>{{ i.FeedTable }}</td>
-                <td>{{ i.LengthPath }}</td>
-                <td>{{ i.Durability }}</td>
+                <td><a href="/material/{{i.material_id}}/info">{{ i.material.name }}</a></td>
+                <td><a href="/tool/{{i.tool_id}}/info">{{ i.tool.name }}</a></td>
+                <td><a href="/coating/{{i.coating_id}}/info">{{ i.coating.name }}</a></td>
+                <td>{{ i.spindle_speed | int }}</td>
+                <td>{{ i.feed_table | int }}</td>
+                <td>{{ i.length_path | round(2)}}</td>
+                <td>{{ i.durability | round(2)}}</td>
                 <td>
-                    <a href="/experiments/{{i.id}}/delete" class="btn btn-warning">Удалить</a>
-                    <a href="/experiments/{{i.id}}/info" class="btn btn-success">Подробнее</a>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
+                        <a href="/experiments/{{i.id}}/delete" class="btn btn-warning">Удалить</a>
+                        <a href="/experiments/{{i.id}}/info" class="btn btn-success">Подробнее</a>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    <div id="dash-container" style="height: 100vh;">
+            <iframe src="/dash_wear/" width="100%" height="100%" frameborder="0"></iframe>
+    </div>
 </div>
 {% endblock %}
 

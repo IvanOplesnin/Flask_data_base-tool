@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+
+{% block tittle %}
+<style>
+    input[type="range"]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 8px;
+        cursor: pointer;
+        background: #343a40; /* Цвет линии */
+        border-radius: 4px;
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .result {
+        font-weight: bold;
+        margin-top: 10px;
+    }
+    .slider-container {
+        margin-bottom: 20px;
+    }
+    .value-container {
+        margin-top: -20px;
+        margin-bottom: 20px;
+    }
+    .results-container {
+        display: flex; /* Размещаем результаты в одну строку */
+        justify-content: space-between; /* Пространство между блоками */
+        align-items: center; /* Выравниваем элементы по центру */
+        border-top: 1px solid #ccc; /* Верхняя граница */
+        border-bottom: 1px solid #ccc; /* Нижняя граница */
+        padding: 10px 0; /* Отступы сверху и снизу */
+        margin-top: 20px; /* Отступ сверху */
+    }
+    .result-block {
+        flex: 1; /* Равное распределение ширины между блоками */
+        text-align: center; /* Центровка текста */
+        padding: 0 10px; /* Отступы внутри блока */
+        position: relative; /* Позиционирование для псевдоэлемента */
+    }
+    .result-block:not(:last-child)::after {
+        content: ''; /* Пустой контент для разделителя */
+        position: absolute; /* Абсолютное позиционирование */
+        top: 0;
+        right: 0; /* Линия справа от блока */
+        width: 1px; /* Ширина линии */
+        height: 100%; /* Высота линии на всю высоту блока */
+        background-color: #ccc; /* Цвет разделительной линии */
+    }
+</style>
+
+<div class="container">
+    <h1 class="mt-4">Параметры резания</h1>
+
+    <!-- Форма выбора параметров -->
+    <form method="POST">
+        <!-- Выпадающий список для выбора типа материала -->
+        <div class="form-group">
+            <label for="material_type">Тип материала</label>
+            <select class="form-control" id="material_type" name="material_type">
+                <option value="">Выберите тип материала</option>
+                {% for type in material_types %}
+                <option value="{{ type.id }}" {% if type.id == selected_type %}selected{% endif %}>
+                    {{ type.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Выпадающий список для выбора материала -->
+        <div class="form-group">
+            <label for="material">Материал</label>
+            <select class="form-control" id="material" name="material" disabled>
+                <option value="">Сначала выберите тип материала</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="tool">Инструмент</label>
+            <select class="form-control" id="tool" name="tool">
+                {% for tool in tools %}
+                <option value="{{ tool.id }}" {% if tool.id == selected_tool %}selected{% endif %}>
+                    {{ tool.name }}, {{ tool.name_easy }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="coating">Покрытие</label>
+            <select class="form-control" id="coating" name="coating">
+                {% for coating in coatings %}
+                <option value="{{ coating.id }}" {% if coating.id == selected_coating %}selected{% endif %}>
+                    {{ coating.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div id="recommended-parameters">
+
+        </div>
+        <div id="dash-container" style="height: 100vh;">
+            <iframe src="/dash/" width="100%" height="100%" frameborder="0"></iframe>
+        </div>
+    </form>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var materialTypeSelect = document.getElementById('material_type');
+    var materialSelect = document.getElementById('material');
+    var toolSelect = document.getElementById('tool');
+    var coatingSelect = document.getElementById('coating');
+
+    // Обработчик изменения типа материала
+    materialTypeSelect.addEventListener('change', function() {
+        updateMaterialOptions();
+    });
+
+    // Обработчики изменений для всех элементов формы
+    materialSelect.addEventListener('change', updateCoefficients);
+    toolSelect.addEventListener('change', updateCoefficients);
+    coatingSelect.addEventListener('change', updateCoefficients);
+
+    function updateMaterialOptions() {
+        var typeId = materialTypeSelect.value;
+
+        if (typeId) {
+            fetch(`/materials/by_type/${typeId}`)
+                .then(response => response.json())
+                .then(data => {
+                    materialSelect.innerHTML = '<option value="">Выберите материал</option>';
+                    data.forEach(material => {
+                        var option = document.createElement('option');
+                        option.value = material.id;
+                        option.textContent = material.name;
+                        materialSelect.appendChild(option);
+                    });
+                    materialSelect.disabled = false;
+                });
+        } else {
+            materialSelect.innerHTML = '<option value="">Сначала выберите тип материала</option>';
+            materialSelect.disabled = true;
+        }
+
+        updateCoefficients(); // Обновляем коэффициенты при изменении типа материала
+    }
+
+    function updateCoefficients() {
+        var materialId = materialSelect.value;
+        var toolId = toolSelect.value;
+        var coatingId = coatingSelect.value;
+
+        if (materialId && toolId && coatingId) {
+            fetch(`/update_graph_data`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    material_id: materialId,
+                    tool_id: toolId,
+                    coating_id: coatingId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    var iframe = document.querySelector('#dash-container iframe');
+                    iframe.contentWindow.location.reload(); // Перезагрузка iframe для обновления графика и результатов
+
+                    // Обновляем отображение рекомендуемых параметров
+                    var recommendedData = data.recommended_data;
+                    var recommendedDiv = document.getElementById('recommended-parameters');
+                    if (recommendedData) {
+                        // Создаем HTML для отображения рекомендуемых параметров
+                        var html = '<h3>Рекомендуемые режимы резания</h3>';
+                        html += '<table class="table table-striped table-bordered"><tbody>';
+                        html += '<tr><th>Обороты шпинделя, об/мин</th><td>' + recommendedData.spindle_speed + '</td></tr>';
+                        html += '<tr><th>Скорость резания, м/мин</th><td>' + recommendedData.cutting_speed + '</td></tr>';
+                        html += '<tr><th>Подача, мм/мин</th><td>' + recommendedData.feed_rate + '</td></tr>';
+                        html += '<tr><th>Подача на зуб, мм/зуб</th><td>' + recommendedData.feed_per_tooth + '</td></tr>';
+                        html += '<tr><th>Силы резания, Н</th><td>' + recommendedData.cutting_force + '</td></tr>';
+                        html += '<tr><th>Температура, °C</th><td>' + recommendedData.temperature + '</td></tr>';
+                        html += '<tr><th>Стойкость, мин</th><td>' + recommendedData.durability + '</td></tr>';
+                        html += '</tbody></table>';
+                        recommendedDiv.innerHTML = html;
+                    } else {
+                        recommendedDiv.innerHTML = '<p>Рекомендуемые режимы резания не найдены для выбранных параметров.</p>';
+                    }
+                } else {
+                    console.error('Ошибка при получении данных');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+            });
+        } else {
+            // Если не все параметры выбраны, очищаем блок рекомендуемых параметров
+            var recommendedDiv = document.getElementById('recommended-parameters');
+            recommendedDiv.innerHTML = '';
+        }
+    }
+
+    // Инициализируем коэффициенты при загрузке страницы
+    updateCoefficients();
+});
+</script>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block tittle %}
+<style>
+    h1 {
+        font-size: 24px;
+    }
+    h2 {
+        font-size: 16px;
+    }
+    .materials-table {
+        width: 100%; /* Ширина таблицы на 100% */
+        border-collapse: collapse; /* Объединяем границы ячеек */
+    }
+
+    .materials-table th, .materials-table td {
+        border: 1px solid #ccc; /* Границы ячеек и заголовков */
+        padding: 8px; /* Отступы внутри ячеек */
+    }
+
+    .materials-table th {
+        background-color: #f2f2f2; /* Цвет фона для заголовков */
+    }
+</style>
+<div class="container mt-5">
+    <h1> Триботехничские свойства </h1>
+    <form method="GET" action="/adhesive" class="form-inline mb-3">
+        <div class="row">
+            <div class="form-group col-md-4">
+                <label for="material" class="sr-only">Материал</label>
+                <select name="material_id" id="material" class="form-control mb-2">
+                    <option value="">Все материалы</option>
+                    {% for material in materials %}
+                        <option value="{{ material.id }}" {% if material.id == selected_material %}selected{% endif %}>{{ material.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="coating" class="sr-only">Покрытие</label>
+                <select name="coating_id" id="coating" class="form-control mb-2">
+                    <option value="">Все покрытия</option>
+                    {% for coating in coatings %}
+                        <option value="{{ coating.id }}" {% if coating.id == selected_coating %}selected{% endif %}>{{ coating.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="temperature" class="sr-only">Температура</label>
+                <select name="temperature" id="temperature" class="form-control mb-2">
+                    <option value="">Различные температурные режимы</option>
+                    {% for adh in uniq_temperature %}
+                        <option value="{{ adh.temperature }}" {% if adh.temperature == selected_temperature %}selected{% endif %}>{{ adh.temperature | int }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-42">
+                <button type="submit" class="btn btn-primary mb-2">Найти</button>
+            </div>
+        </div>
+    </form>
+    <table class="materials-table">
+        <thead>
+            <tr>
+                <th>Название материала</th>
+                <th>Название покрытия</th>
+                <th>Температура, &deg;С</th>
+                <th>&tau;<sub>nn</sub>, Мпа</th>
+                <th>P<sub>rn</sub>, Мпа</th>
+                <th>&tau;<sub>nn</sub> / P<sub>rn</sub></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in adhesive %}
+            <tr>
+                <td><a href="/material/{{ i.material.id }}/info">{{ i.material.name }}</a></td>
+                <td><a href="/coating/{{ i.coating.id }}/info">{{ i.coating.name }}</td>
+                <td>{{ i.temperature }}</td>
+                <td>{{ i.bond_strength_adhesive | round(2) }} </td>
+                <td>{{ i.normal_shear_strength | int }} </td>
+                <td>{{ i.coefficient_shear | round(3)}} </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

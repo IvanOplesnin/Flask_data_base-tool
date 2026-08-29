@@ -23,24 +23,37 @@
     }
 </style>
 <div class="container mt-5">
-    <h1> Таблица покрытий</h1>
+    <h1> Покрытие {{ coating.name }}</h1>
     <table class="materials-table">
         <thead>
             <tr>
                 <th>Название покрытия</th>
                 <th>Материал покрытия</th>
                 <th>Способ нанесения</th>
-                <th>Максимальная толщина</th>
+                <th>Цвет</th>
+                <th>Максимальная толщина, мм</th>
+                <th>Микротвердость, HRC</th>
+                <th>Тепмературная устойчивость, &deg;С</th>
+                <th>Коэффициент трения</th>
+                <th>Действия</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td>{{ coating.Name }}</td>
-                <td>{{ coating.MaterialCoating }}</td>
-                <td>{{ coating.TypeApplication }}</td>
-                <td>{{ coating.MaxThickness }}</td>
-                <td><a href="/coating/{{coating.id}}/delete"  class="btn btn-warning">Удалить</a>
-                <a href="/coating/{{coating.id}}/update"  class="btn btn-success">Изменить</a></td>
+                <td>{{ coating.name }}</td>
+                <td>{{ coating.material_coating }}</td>
+                <td>{{ coating.type_application }}</td>
+                <td>{{ coating.color_coating }}</td>
+                <td>{{ coating.max_thickness }}</td>
+                <td>{{ coating.nano_hardness }}</td>
+                <td>{{ coating.temperature_resistance }}</td>
+                <td>{{ coating.coefficient_friction }}</td>
+                <td>
+                     <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
+                        <a href="/coating/{{coating.id}}/delete" class="btn btn-warning">Удалить</a>
+                        <a href="/coating/{{coating.id}}/update" class="btn btn-success">Изменить</a>
+                    </div>
+                </td>
             </tr>
         </tbody>
     </table>

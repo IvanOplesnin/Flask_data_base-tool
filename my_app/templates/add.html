@@ -5,47 +5,383 @@
     h1 {
         font-size: 24px;
     }
+
+    /* Контейнер для кнопок с использованием Flexbox */
+    .btn-container {
+        display: flex;
+        justify-content: space-between; /* Равномерное распределение кнопок */
+        margin-bottom: 15px;
+    }
+
+    /* Кнопки растягиваются равномерно */
+    .btn-toggle {
+        flex: 1; /* Растягиваем кнопки на всю ширину */
+        margin: 0 5px; /* Отступы между кнопками */
+    }
+
+    .form-container {
+        display: none; /* Скрываем контейнер формы */
+        margin-top: 15px;
+    }
+    .form-container_tool {
+        display: none; /* Скрываем контейнер формы */
+        margin-top: 40px !important;
+        padding: 10px;
+        border: 10px solid #0000FF;
+        border-radius: 10px;
+    }
+
+    /* стили при наведении курсора на checkbox */
+    .custom-checkbox:not(:disabled):not(:checked)+label:hover::before {
+      border-color: #b3d7ff;
+    }
+    /* стили для активного состояния чекбокса (при нажатии на него) */
+    .custom-checkbox:not(:disabled):active+label::before {
+      background-color: #b3d7ff;
+      border-color: #b3d7ff;
+    }
+    /* стили для чекбокса, находящегося в фокусе */
+    .custom-checkbox:focus+label::before {
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    /* стили для чекбокса, находящегося в фокусе и не находящегося в состоянии checked */
+    .custom-checkbox:focus:not(:checked)+label::before {
+      border-color: #80bdff;
+    }
+    /* стили для чекбокса, находящегося в состоянии disabled */
+    .custom-checkbox:disabled+label::before {
+      background-color: #e9ecef;
+    }
+    .my_label {
+        font-size: 25px;
+        font-family: 'Times New Roman', Times, serif;
+        font-weight: bold;
+    }
 </style>
-<div class="container mt-5">
-    <h1>Обрабатываемый материал</h1>
-    <form method="post">
-        <input type="text" name="Name" class="form-control" value="{{ request.form.get('Name', '') }}" placeholder="Название материала">
-        <input type="text" name="NameP" class="form-control" value="{{ request.form.get('NameP', '') }}" placeholder="Физическо-механические свойства">
-        <input type="text" name="NameX" class="form-control" value="{{ request.form.get('NameX', '') }}" placeholder="Химический состав">
-        <input type="text" name="NamePr" class="form-control" value="{{ request.form.get('NamePr', '') }}" placeholder="Свойства">
-        <input type="text" name="NameGost" class="form-control" value="{{ request.form.get('NamePr', '') }}" placeholder="Гост">
-        <!-- Остальные поля для первой формы -->
-        <input type="submit" name="Button_1" class="btn btn-success" value="Добавить">
-    </form>
-</div><br>
 
 <div class="container mt-5">
-    <h1>Износостойкое покрытие</h1>
-    <form method="post">
-        <input type="text" name="Name1" class="form-control" value="{{ request.form.get('Name1', '') }}" placeholder="Название покрытия">
-        <input type="text" name="Name2" class="form-control" value="{{ request.form.get('Name2', '') }}" placeholder="Материал покрытия">
-        <input type="text" name="Name3" class="form-control" value="{{ request.form.get('Name3', '') }}" placeholder="Способ нанесения">
-        <input type="text" name="Color" class="form-control" value="{{ request.form.get('Color', '') }}" placeholder="Цвет">
-        <input type="text" name="Name4" class="form-control" value="{{ request.form.get('Name4', '') }}" placeholder="Максимальная толщина(Число)">
-        <input type="text" name="NameNano" class="form-control" value="{{ request.form.get('NameNano', '') }}" placeholder="Микротвердость">
-        <input type="text" name="NameResistnce" class="form-control" value="{{ request.form.get('NameResistnce', '') }}" placeholder="Температурное устойчивость">
-        <input type="text" name="NameKoef" class="form-control" value="{{ request.form.get('NameKoef', '') }}" placeholder="Коэффициент трения">
-        <input type="submit" name="Button_2" class="btn btn-success" value="Добавить">
-    </form>
-</div><br>
+    <h1>Добавить данные</h1>
 
-<div class="container mt-5">
-    <h1>Режущий инструмент</h1>
-    <form method="post">
-        <input type="text" name="Name5" class="form-control" value="{{ request.form.get('Name5', '') }}" placeholder="Название инструмента">
-        <input type="text" name="Name6" class="form-control" value="{{ request.form.get('Name6', '') }}" placeholder="Материал инструмента">
-        <input type="text" name="Name8" class="form-control" value="{{ request.form.get('Name8', '') }}" placeholder="Количество зубьев фрезы(целое число)">
-        <input type="text" name="Name9" class="form-control" value="{{ request.form.get('Name9', '') }}" placeholder="Диаметр(Число)">
-        <!-- Остальные поля для третьей формы -->
-        <input type="submit" name="Button_3" class="btn btn-success" value="Добавить">
-    </form>
-</div><br>
-{% endblock %}
+    <!-- Контейнер для кнопок -->
+    <div class="btn-container">
+        <button class="btn btn-primary btn-toggle" onclick="toggleForm('material-form')">Добавить материал</button>
+        <button class="btn btn-primary btn-toggle" onclick="toggleForm('coating-form')">Добавить покрытие</button>
+        <button class="btn btn-primary btn-toggle" onclick="toggleForm('tool-form')">Добавить инструмент</button>
+    </div>
+
+    <!-- Форма для добавления материала -->
+    <div id="material-form" class="form-container">
+        <h2>Обрабатываемый материал</h2>
+        <form method="POST">
+            {{ material_form.hidden_tag() }}
+            <div class="form-group">
+                {{ material_form.name.label }}
+                {{ material_form.name(class="form-control", placeholder="Название материала") }}
+            </div>
+            <div class="form-group">
+                {{ material_form.prop_physics.label }}
+                {{ material_form.prop_physics(class="form-control", placeholder="Физико-механические свойства") }}
+            </div>
+            <div class="form-group">
+                {{ material_form.structure.label }}
+                {{ material_form.structure(class="form-control", placeholder="Химический состав") }}
+            </div>
+            <div class="form-group">
+                {{ material_form.properties.label }}
+                {{ material_form.properties(class="form-control", placeholder="Свойства") }}
+            </div>
+            <div class="form-group">
+                {{ material_form.gost.label }}
+                {{ material_form.gost(class="form-control", placeholder="ГОСТ") }}
+            </div>
+            <div class="form-group">
+                {{ material_form.type_id.label }}
+                {{ material_form.type_id(class="form-control") }}
+            </div>
+            <div class="form-group">
+                {{ material_form.new_type.label }}
+                {{ material_form.new_type(class="form-control") }}
+            </div>
+            <div class="form-group">
+                {{ material_form.submit(class="btn btn-success", value="Добавить материал") }}
+            </div>
+        </form>
+    </div>
+
+    <!-- Форма для добавления покрытия -->
+    <div id="coating-form" class="form-container">
+        <h2>Износостойкое покрытие</h2>
+        <form method="POST">
+            {{ coating_form.hidden_tag() }}
+            <div class="form-group">
+                {{ coating_form.name.label }}
+                {{ coating_form.name(class="form-control", placeholder="Название покрытия") }}
+            </div>
+            <div class="form-group">
+                {{ coating_form.material_coating.label }}
+                {{ coating_form.material_coating(class="form-control", placeholder="Материал покрытия") }}
+            </div>
+            <div class="form-group">
+                {{ coating_form.type_application.label }}
+                {{ coating_form.type_application(class="form-control", placeholder="Способ нанесения") }}
+            </div>
+            <div class="form-group">
+                {{ coating_form.max_thickness.label }}
+                {{ coating_form.max_thickness(class="form-control", placeholder="Максимальная толщина") }}
+            </div>
+            <div class="form-group">
+                {{ coating_form.nanohardness.label }}
+                {{ coating_form.nanohardness(class="form-control", placeholder="Микротвердость") }}
+            </div>
+            <div class="form-group">
+                {{ coating_form.temperature_resistance.label }}
+                {{ coating_form.temperature_resistance(class="form-control", placeholder="Температурная устойчивость")
+                }}
+            </div>
+            <div class="form-group">
+                {{ coating_form.koefficient_friction.label }}
+                {{ coating_form.koefficient_friction(class="form-control", placeholder="Коэффициент трения") }}
+            </div>
+            <div class="form-group">
+                {{ coating_form.color_coating.label }}
+                {{ coating_form.color_coating(class="form-control", placeholder="Цвет покрытия") }}
+            </div>
+            <div class="form-group">
+                {{ coating_form.submit(class="btn btn-success", value="Добавить покрытие") }}
+            </div>
+        </form>
+    </div>
+
+    <!-- Форма для добавления инструмента -->
+    <div id="tool-form" class="form-container">
+        <h2>Режущий инструмент</h2>
+        <div class="form-group">
+            <label class='my_label'>Выберите тип инструмента</label>
+            <select class="form-control" name="type_id" id="type_tool">
+                <option value="milling">Фреза</option>
+                <option value="turning">Токарный инструмент</option>
+                <option value="drilling">Сверло</option>
+            </select>
+            <div class="form-container_tool" id='milling-form'>
+                <form method="POST">
+                    {{ milling_geometry_form.hidden_tag() }}
+                    <div class="form-group">
+                        {{ milling_geometry_form.type_milling.label }}
+                        {{ milling_geometry_form.type_milling(class="form-control", placeholder="Например: Фреза концевая") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.name.label }}
+                        {{ milling_geometry_form.name(class="form-control", placeholder="Например: Фреза 6157-7005") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.name_easy.label }}
+                        {{ milling_geometry_form.name_easy(class="form-control", placeholder="Например: Фреза 12 мм") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.material_tool.label }}
+                        {{ milling_geometry_form.material_tool(class="form-control", placeholder="Например: ВК10-ОМ") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.is_indexable.label }}
+                        {{ milling_geometry_form.is_indexable(class="custom-checkbox") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.insert.label }}
+                        {{ milling_geometry_form.insert(class="form-control", placeholder="Например: CNMG120408FP") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.diameter.label }}
+                        {{ milling_geometry_form.diameter(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.type_shank.label }}
+                        {{ milling_geometry_form.type_shank(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.diameter_shank.label }}
+                        {{ milling_geometry_form.diameter_shank(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.number_teeth.label }}
+                        {{ milling_geometry_form.number_teeth(class="form-control", placeholder="Например: 4") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.length.label }}
+                        {{ milling_geometry_form.length(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.length_work.label }}
+                        {{ milling_geometry_form.length_work(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <div class="form-group">
+                        {{ milling_geometry_form.spiral_angle.label }}
+                        {{ milling_geometry_form.spiral_angle(class="form-control", placeholder="Например: 10") }}
+                    </div>
+                    <hr width="100%", color='blue', size='20px'/>
+                    <div class="form-group">
+                        {{ milling_geometry_form.submit(class="btn btn-success", value="Добавить инструмент") }}
+                    </div>
+                </form>
+            </div>
+            <div class="form-container_tool" id='turning-form'>
+                <form method="POST">
+                    {{ turning_form.hidden_tag() }}
+                    <div class="form-group">
+                        {{ turning_form.name.label }}
+                        {{ turning_form.name(class="form-control", placeholder="Например: Фреза 6157-7005") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.name_easy.label }}
+                        {{ turning_form.name_easy(class="form-control", placeholder="Например: Фреза 12 мм") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.material_tool.label }}
+                        {{ turning_form.material_tool(class="form-control", placeholder="Например: ВК10-ОМ") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.is_indexable.label }}
+                        {{ turning_form.is_indexable(class="custom-checkbox") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.insert.label }}
+                        {{ turning_form.insert(class="form-control", placeholder="Например: CNMG120408FP") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.turning_type.label }}
+                        {{ turning_form.turning_type(class="form-control", placeholder="Например: Резец-проходной") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.front_angle.label }}
+                        {{ turning_form.front_angle(class="form-control", placeholder="Например: 4") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.main_rear_angle.label }}
+                        {{ turning_form.main_rear_angle(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.sharpening_angle.label }}
+                        {{ turning_form.sharpening_angle(class="form-control", placeholder="Например: 10") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.cutting_angle.label }}
+                        {{ turning_form.cutting_angle(class="form-control", placeholder="Например: 4") }}
+                    </div>
+                    <div class="form-group">
+                        {{ turning_form.aux_rear_angle.label }}
+                        {{ turning_form.aux_rear_angle(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <hr width="100%" , color='blue' , size='20px'/>
+                    <div class="form-group">
+                        {{ turning_form.submit(class="btn btn-success", value="Добавить инструмент") }}
+                    </div>
+                </form>
+            </div>
+            <div class="form-container_tool" id='drilling-form'>
+                <form method="POST">
+                    {{ drill_form.hidden_tag() }}
+                    <div class="form-group">
+                        {{ drill_form.name.label }}
+                        {{ drill_form.name(class="form-control", placeholder="Например: Фреза 6157-7005") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.name_easy.label }}
+                        {{ drill_form.name_easy(class="form-control", placeholder="Например: Фреза 12 мм") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.material_tool.label }}
+                        {{ drill_form.material_tool(class="form-control", placeholder="Например: ВК10-ОМ") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.is_indexable.label }}
+                        {{ drill_form.is_indexable(class="custom-checkbox") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.insert.label }}
+                        {{ drill_form.insert(class="form-control", placeholder="Например: CNMG120408FP") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.drill_type.label }}
+                        {{ drill_form.drill_type(class="form-control", placeholder="Например: Резец-проходной") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.diameter.label }}
+                        {{ drill_form.diameter(class="form-control", placeholder="Например: 4") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.screw_angle.label }}
+                        {{ drill_form.screw_angle(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.top_angle.label }}
+                        {{ drill_form.top_angle(class="form-control", placeholder="Например: 10") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.front_angle.label }}
+                        {{ drill_form.front_angle(class="form-control", placeholder="Например: 4") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.rear_angle.label }}
+                        {{ drill_form.rear_angle(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <div class="form-group">
+                        {{ drill_form.transverse_edge_angle.label }}
+                        {{ drill_form.transverse_edge_angle(class="form-control", placeholder="Например: 12") }}
+                    </div>
+                    <hr width="100%" , color='blue' , size='20px'/>
+                    <div class="form-group">
+                        {{ drill_form.submit(class="btn btn-success", value="Добавить инструмент") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript для переключения видимости форм и скрытия других -->
+    <script>
+        var typeTool = document.getElementById('type_tool');
+
+        function toggleForm(formId) {
+            var forms = document.getElementsByClassName('form-container');
+
+            // Скрыть все формы
+            for (var i = 0; i < forms.length; i++) {
+                forms[i].style.display = 'none';
+            }
+
+            // Показать только выбранную форму
+            var form = document.getElementById(formId);
+            if (form) {
+                form.style.display = 'block';
+            }
+        }
+        // Обработчик для переключения форм инструментов
+        document.addEventListener('DOMContentLoaded', function() {
+            var typeToolSelect = document.getElementById('type_tool');
+
+            // Скрываем все формы инструментов при загрузке страницы
+            hideAllToolForms();
+
+            typeToolSelect.addEventListener('change', function() {
+                hideAllToolForms();
+
+                var selectedType = typeToolSelect.value;
+                if (selectedType === 'milling') {
+                    document.getElementById('milling-form').style.display = 'block';
+                } else if (selectedType === 'turning') {
+                    document.getElementById('turning-form').style.display = 'block';
+                } else if (selectedType === 'drilling') {
+                    document.getElementById('drilling-form').style.display = 'block';
+                }
+            });
+
+            function hideAllToolForms() {
+                document.getElementById('milling-form').style.display = 'none';
+                document.getElementById('turning-form').style.display = 'none';
+                document.getElementById('drilling-form').style.display = 'none';
+            }
+        });
+    </script>
+    {% endblock %}
 
 
 

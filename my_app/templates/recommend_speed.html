@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block tittle %}
+<style>
+    h1 {
+        font-size: 24px;
+    }
+    h2 {
+        font-size: 16px;
+    }
+    .materials-table {
+        width: 100%; /* Ширина таблицы на 100% */
+        border-collapse: collapse; /* Объединяем границы ячеек */
+    }
+
+    .materials-table th, .materials-table td {
+        border: 1px solid #ccc; /* Границы ячеек и заголовков */
+        padding: 8px; /* Отступы внутри ячеек */
+    }
+
+    .materials-table th {
+        background-color: #f2f2f2; /* Цвет фона для заголовков */
+    }
+</style>
+<div class="container mt-5">
+    <h1> Рекомендуемые режимы </h1>
+    <form method="GET" action="/recommended_speed" class="form-inline mb-3">
+        <div class="row">
+            <div class="form-group col-md-4">
+                <label for="material" class="sr-only">Материал</label>
+                <select name="material_id" id="material" class="form-control mb-2">
+                    <option value="">Все материалы</option>
+                    {% for material in materials %}
+                        <option value="{{ material.id }}" {% if material.id == selected_material_id %}selected{% endif %}>{{ material.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="coating" class="sr-only">Покрытие</label>
+                <select name="coating_id" id="coating" class="form-control mb-2">
+                    <option value="">Все покрытия</option>
+                    {% for coating in coatings %}
+                        <option value="{{ coating.id }}" {% if coating.id == selected_coating_id %}selected{% endif %}>{{ coating.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="tool" class="sr-only">Инструмент</label>
+                <select name="tool_id" id="tool" class="form-control mb-2">
+                    <option value="">Все инструменты</option>
+                    {% for tool in tools %}
+                        <option value="{{ tool.id }}" {% if tool.id == selected_tool_id %}selected{% endif %}>{{ tool.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-42">
+                <button type="submit" class="btn btn-primary mb-2">Найти</button>
+            </div>
+        </div>
+    </form>
+    <table class="materials-table">
+        <thead>
+            <tr>
+                <th>Название материала</th>
+                <th>Инструмент</th>
+                <th>Покрытие</th>
+                <th>Обороты шпинделя, об/мин</th>
+                <th>Скорость резания, м/мин</th>
+                <th>Подача, мм/мин</th>
+                <th>Подача на зуб, мм/зуб</th>
+                <th>Силы рзания, Н</th>
+                <th>Температура, °C</th>
+                <th>Стойкость, мин</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in recomended_speed %}
+            <tr>
+                <td><a href="/material/{{i.material_id}}/info">{{ i.material.name }}</a></td>
+                <td><a href="/tool/{{i.tool_id}}/info">{{ i.tool.name }}</a></td>
+                <td><a href="/coating/{{i.coating_id}}/info">{{ i.coating.name }}</a></td>
+                <td>{{ i.spindle_speed | int }}</td>
+                <td>{{ i.cutter_speed | round(2) }}</td>
+                <td>{{ i.feed_table | int }}</td>
+                <td>{{ i.feed_of_teeth | round(3) }}</td>
+                <td>{{ i.Fz }}</td>
+                <td>{{ i.temperature }}</td>
+                <td>{{ i.durability_ }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
