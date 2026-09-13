@@ -161,6 +161,7 @@
                 <option value="milling">Фреза</option>
                 <option value="turning">Токарный инструмент</option>
                 <option value="drilling">Сверло</option>
+                <option value="threading">Метчик (резьбонарезание)</option>
             </select>
             <div class="form-container_tool" id='milling-form'>
                 <form method="POST">
@@ -333,6 +334,38 @@
                     </div>
                 </form>
             </div>
+            <div class="form-container_tool" id='threading-form'>
+                <form method="POST">
+                    {{ tap_form.hidden_tag() }}
+                    <div class="form-group">
+                        {{ tap_form.name.label }}
+                        {{ tap_form.name(class="form-control", placeholder="Например: М10 машинный") }}
+                    </div>
+                    <div class="form-group">
+                        {{ tap_form.name_easy.label }}
+                        {{ tap_form.name_easy(class="form-control", placeholder="Например: Метчик М10") }}
+                    </div>
+                    <div class="form-group">
+                        {{ tap_form.material_tool.label }}
+                        {{ tap_form.material_tool(class="form-control", placeholder="Например: HSS") }}
+                    </div>
+                    <div class="form-group">
+                        {{ tap_form.thread_standard.label }}
+                        {{ tap_form.thread_standard(class="form-control", placeholder="Например: M10") }}
+                    </div>
+                    <div class="form-group">
+                        {{ tap_form.thread_diameter.label }}
+                        {{ tap_form.thread_diameter(class="form-control", placeholder="Например: 10") }}
+                    </div>
+                    <div class="form-group">
+                        {{ tap_form.pitch.label }}
+                        {{ tap_form.pitch(class="form-control", placeholder="Например: 1.5") }}
+                    </div>
+                    <div class="form-group">
+                        {{ tap_form.submit(class="btn btn-success", value="Добавить метчик") }}
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -371,6 +404,8 @@
                     document.getElementById('turning-form').style.display = 'block';
                 } else if (selectedType === 'drilling') {
                     document.getElementById('drilling-form').style.display = 'block';
+                } else if (selectedType === 'threading') {
+                    document.getElementById('threading-form').style.display = 'block';
                 }
             });
 
@@ -378,10 +413,10 @@
                 document.getElementById('milling-form').style.display = 'none';
                 document.getElementById('turning-form').style.display = 'none';
                 document.getElementById('drilling-form').style.display = 'none';
+                document.getElementById('threading-form').style.display = 'none';
             }
         });
     </script>
     {% endblock %}
-
 
 

@@ -15,7 +15,7 @@
         </tr>
         <tr>
             <th>Тип инструмента</th>
-            <td>{{ tool.tool_type }}</td>
+            <td>{% if tool.tool_type == 'milling' %}Фреза{% elif tool.tool_type == 'turning' %}Токарный инструмент{% elif tool.tool_type == 'drilling' %}Сверло{% elif tool.tool_type == 'tap' %}Метчик (резьбонарезание){% else %}{{ tool.tool_type }}{% endif %}</td>
         </tr>
         <tr>
             <th>Режущие пластины</th>
@@ -92,7 +92,7 @@
                 <th>Вспомогательный задний угол</th>
                 <td>{{ tool.turning_geometry.aux_rear_angle }}°</td>
             </tr>
-        {% elif tool.tool_type == 'drill' and tool.drill_geometry %}
+        {% elif tool.tool_type == 'drilling' and tool.drill_geometry %}
             <tr>
                 <th colspan="2" class="text-center">Геометрия сверла</th>
             </tr>
@@ -123,6 +123,22 @@
             <tr>
                 <th>Угол поперечной кромки</th>
                 <td>{{ tool.drill_geometry.transverse_edge_angle }}°</td>
+            </tr>
+        {% elif tool.tool_type == 'tap' and tool.tap_geometry %}
+            <tr>
+                <th colspan="2" class="text-center">Геометрия метчика</th>
+            </tr>
+            <tr>
+                <th>Стандарт резьбы</th>
+                <td>{{ tool.tap_geometry.thread_standard }}</td>
+            </tr>
+            <tr>
+                <th>Диаметр резьбы</th>
+                <td>{{ tool.tap_geometry.thread_diameter }} мм</td>
+            </tr>
+            <tr>
+                <th>Шаг резьбы</th>
+                <td>{{ tool.tap_geometry.pitch }} мм</td>
             </tr>
         {% endif %}
         <!-- Действия -->

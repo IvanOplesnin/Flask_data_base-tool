@@ -1,0 +1,16 @@
+.git
+.idea
+.venv
+.pytest_cache
+__pycache__
+**/__pycache__
+*.py[cod]
+tests
+backups
+uploads
+me_app.db
+me_app_test.db
+*.xlsx
+Recommendation.csv
+.flaskenv
+.env

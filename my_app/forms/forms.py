@@ -40,7 +40,12 @@ class ToolForm(FlaskForm):
     material_tool = StringField('Материал инструмента')
     name_easy = StringField('Название инструмента', validators=[DataRequired()])
     tool_type = SelectField('Тип инструмента', coerce=str, validators=[DataRequired()],
-                            choices=[('milling', 'Фреза'), ('turning', 'Токарный инструмент'), ('drilling', 'Сверло')])
+                            choices=[
+                                ('milling', 'Фреза'),
+                                ('turning', 'Токарный инструмент'),
+                                ('drilling', 'Сверло'),
+                                ('tap', 'Метчик (резьбонарезание)'),
+                            ])
     is_insert = BooleanField('Составной инструмент(с пластинами)',
                              default=True, false_values=None)
     submit = SubmitField('Добавить инструмент')
@@ -174,6 +179,7 @@ class ConfirmImportForm(FlaskForm):
 
 class TapForm(FlaskForm):
     name = StringField('Наименование метчика', validators=[DataRequired()])
+    name_easy = StringField('Краткое название', validators=[Optional()])
     material_tool = StringField('Материал метчика', validators=[DataRequired()])
     thread_standard = StringField('Стандарт резьбы', validators=[DataRequired()])
     thread_diameter = FloatField('Диаметр резьбы, мм', validators=[DataRequired(), NumberRange(min=0.01)])

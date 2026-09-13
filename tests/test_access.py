@@ -1,5 +1,5 @@
 from my_app.extensions import db
-from my_app.models import Material, MaterialType, User
+from my_app.models import Material, MaterialType, Tool, User
 
 
 def create_user(username, password, role):
@@ -110,3 +110,51 @@ def test_writer_can_add_tap(client, app):
 
     assert response.status_code == 200
     assert b'M10 tap' in response.data
+
+
+def test_writer_can_add_and_manage_tap_from_main_tool_form(client, app):
+    app.config['AUTH_REQUIRED'] = True
+    with app.app_context():
+        create_user('writer', 'writer-password', 'writer')
+
+    client.post('/login', data={'username': 'writer', 'password': 'writer-password'})
+    assert 'Метчик (резьбонарезание)'.encode() in client.get('/add').data
+
+    response = client.post('/add', data={
+        'name': 'M12 machine tap',
+        'name_easy': 'Метчик M12',
+        'material_tool': 'HSS-Co',
+        'thread_standard': 'M12',
+        'thread_diameter': '12',
+        'pitch': '1.75',
+        'submit': 'Добавить метчик',
+    }, follow_redirects=True)
+    assert response.status_code == 200
+
+    with app.app_context():
+        tap = db.session.scalar(db.select(Tool).where(Tool.name == 'M12 machine tap'))
+        assert tap.tool_type == 'tap'
+        assert tap.processing_type == 'threading'
+        assert tap.tap_geometry.thread_standard == 'M12'
+        tap_id = tap.id
+
+    assert b'M12 machine tap' in client.get('/tools?tool_type=tap').data
+    assert b'M12 machine tap' in client.get('/processing/threading').data
+    assert 'Геометрия метчика'.encode() in client.get(f'/tool/{tap_id}/info').data
+
+    response = client.post(f'/tool/{tap_id}/update', data={
+        'name': 'M12 machine tap',
+        'name_easy': 'Метчик M12 x 1.5',
+        'material_tool': 'HSS-Co',
+        'thread_standard': 'M12x1.5',
+        'thread_diameter': '12',
+        'pitch': '1.5',
+        'submit': 'Добавить метчик',
+    }, follow_redirects=True)
+    assert response.status_code == 200
+
+    with app.app_context():
+        tap = db.session.get(Tool, tap_id)
+        assert tap.name_easy == 'Метчик M12 x 1.5'
+        assert tap.tap_geometry.thread_standard == 'M12x1.5'
+        assert tap.tap_geometry.pitch == 1.5

@@ -15,13 +15,13 @@
             {% endfor %}
         </div>
 
-        <div class="form-group">
+        {% if form.name_easy is defined %}<div class="form-group">
             {{ form.name_easy.label }}
             {{ form.name_easy(class="form-control") }}
             {% for error in form.name_easy.errors %}
                 <span class="text-danger">{{ error }}</span>
             {% endfor %}
-        </div>
+        </div>{% endif %}
 
         <div class="form-group">
             {{ form.material_tool.label }}
@@ -34,16 +34,16 @@
         <!-- Тип инструмента (неизменяемый) -->
         <div class="form-group">
             <label>Тип инструмента</label>
-            <input type="text" class="form-control" value="{% if tool.tool_type == 'milling' %}Фреза{% elif tool.tool_type == 'turning' %}Токарный инструмент{% elif tool.tool_type == 'drilling' %}Сверло{% else %}{{ tool.tool_type }}{% endif %}" readonly>
+            <input type="text" class="form-control" value="{% if tool.tool_type == 'milling' %}Фреза{% elif tool.tool_type == 'turning' %}Токарный инструмент{% elif tool.tool_type == 'drilling' %}Сверло{% elif tool.tool_type == 'tap' %}Метчик (резьбонарезание){% else %}{{ tool.tool_type }}{% endif %}" readonly>
         </div>
 
-        <div class="form-group form-check">
+        {% if form.is_indexable is defined %}<div class="form-group form-check">
             {{ form.is_indexable(class="form-check-input") }}
             {{ form.is_indexable.label(class="form-check-label") }}
             {% for error in form.is_indexable.errors %}
                 <span class="text-danger">{{ error }}</span>
             {% endfor %}
-        </div>
+        </div>{% endif %}
 
         <!-- Поля геометрии инструмента -->
         <h3>Геометрия инструмента</h3>

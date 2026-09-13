@@ -40,6 +40,8 @@
                 'turning' %}selected{% endif %}>Токарный инструмент</option>
                 <option value="drilling" {% if selected_tool_type==
                 'drilling' %}selected{% endif %}>Сверло</option>
+                <option value="tap" {% if selected_tool_type==
+                'tap' %}selected{% endif %}>Метчик (резьбонарезание)</option>
             </select>
         </div>
         <div class="form-group mr-2">
@@ -113,6 +115,10 @@
                     <strong>Передний угол:</strong> {{ tool.drill_geometry.front_angle }}°<br>
                     <strong>Задний угол:</strong> {{ tool.drill_geometry.rear_angle }}°<br>
                     <strong>Угол поперечной кромки:</strong> {{ tool.drill_geometry.transverse_edge_angle }}°<br>
+                {% elif tool.tool_type == 'tap' and tool.tap_geometry %}
+                    <strong>Стандарт резьбы:</strong> {{ tool.tap_geometry.thread_standard }}<br>
+                    <strong>Диаметр резьбы:</strong> {{ tool.tap_geometry.thread_diameter }} мм<br>
+                    <strong>Шаг резьбы:</strong> {{ tool.tap_geometry.pitch }} мм<br>
                 {% endif %}<br>
             </td>
         </tr>

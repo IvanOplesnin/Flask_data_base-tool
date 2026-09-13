@@ -320,6 +320,7 @@ def add():
     milling_geometry_form = MillingGeometryForm()
     turning_form = TurningGeometryForm()
     drill_form = DrillGeometryForm()
+    tap_form = TapForm()
 
     if request.method == 'POST':
         try:
@@ -442,13 +443,31 @@ def add():
                 db.session.commit()
                 return redirect('/add')
 
+            if tap_form.submit.data and tap_form.validate_on_submit():
+                tap = Tool(
+                    name=tap_form.name.data,
+                    name_easy=tap_form.name_easy.data or tap_form.name.data,
+                    tool_type='tap',
+                    processing_type='threading',
+                    material_tool=tap_form.material_tool.data,
+                    is_indexable=False,
+                )
+                tap.tap_geometry = TapGeometry(
+                    thread_standard=tap_form.thread_standard.data,
+                    thread_diameter=tap_form.thread_diameter.data,
+                    pitch=tap_form.pitch.data,
+                )
+                db.session.add(tap)
+                db.session.commit()
+                return redirect('/add')
+
         except Exception as e:
             db.session.rollback()
             flash('Не удалось сохранить данные. Проверьте уникальность названия и значения полей.', 'danger')
 
     return render_template('add.html', material_form=material_form, coating_form=coating_form,
                            milling_geometry_form=milling_geometry_form, turning_form=turning_form,
-                           drill_form=drill_form)
+                           drill_form=drill_form, tap_form=tap_form)
 
 
 @web_bp.route('/materials', methods=['GET', 'POST'])
@@ -704,7 +723,8 @@ def tools():
     query = Tool.query.options(
         db.joinedload(Tool.milling_geometry),
         db.joinedload(Tool.turning_geometry),
-        db.joinedload(Tool.drill_geometry)
+        db.joinedload(Tool.drill_geometry),
+        db.joinedload(Tool.tap_geometry),
     )
 
     # Фильтрация по типу инструмента
@@ -750,7 +770,7 @@ def add_tap():
     if form.validate_on_submit():
         tap = Tool(
             name=form.name.data,
-            name_easy=form.name.data,
+            name_easy=form.name_easy.data or form.name.data,
             material_tool=form.material_tool.data,
             tool_type='tap',
             processing_type='threading',
@@ -825,6 +845,8 @@ def tool_update(tool_id):
         form = TurningGeometryForm()
     elif tool.tool_type == 'drilling':
         form = DrillGeometryForm()
+    elif tool.tool_type == 'tap':
+        form = TapForm()
     else:
         form = ToolForm()
 
@@ -833,7 +855,8 @@ def tool_update(tool_id):
         form.name.data = tool.name
         form.material_tool.data = tool.material_tool
         form.name_easy.data = tool.name_easy
-        form.is_indexable.data = tool.is_indexable  # Убедитесь, что поле называется `is_insert` или `is_indexable`
+        if 'is_indexable' in form._fields:
+            form.is_indexable.data = tool.is_indexable
 
         # Предзаполняем данные геометрии инструмента
         if tool.tool_type == 'milling' and tool.milling_geometry:
@@ -860,13 +883,18 @@ def tool_update(tool_id):
             form.front_angle.data = tool.drill_geometry.front_angle
             form.rear_angle.data = tool.drill_geometry.rear_angle
             form.transverse_edge_angle.data = tool.drill_geometry.transverse_edge_angle
+        elif tool.tool_type == 'tap' and tool.tap_geometry:
+            form.thread_standard.data = tool.tap_geometry.thread_standard
+            form.thread_diameter.data = tool.tap_geometry.thread_diameter
+            form.pitch.data = tool.tap_geometry.pitch
 
     elif form.validate_on_submit():
         # Обновляем основные поля инструмента
         tool.name = form.name.data
         tool.material_tool = form.material_tool.data
         tool.name_easy = form.name_easy.data
-        tool.is_indexable = form.is_indexable.data  # Убедитесь, что поле называется правильно
+        if 'is_indexable' in form._fields:
+            tool.is_indexable = form.is_indexable.data
 
         # Обновляем данные геометрии инструмента
         if tool.tool_type == 'milling':
@@ -899,6 +927,12 @@ def tool_update(tool_id):
             tool.drill_geometry.front_angle = form.front_angle.data
             tool.drill_geometry.rear_angle = form.rear_angle.data
             tool.drill_geometry.transverse_edge_angle = form.transverse_edge_angle.data
+        elif tool.tool_type == 'tap':
+            if not tool.tap_geometry:
+                tool.tap_geometry = TapGeometry()
+            tool.tap_geometry.thread_standard = form.thread_standard.data
+            tool.tap_geometry.thread_diameter = form.thread_diameter.data
+            tool.tap_geometry.pitch = form.pitch.data
 
         try:
             db.session.commit()
