@@ -7,10 +7,21 @@
         <p class="lead">Подберите материал, инструмент, покрытие и режимы резания.</p>
     </div>
     <div class="row g-4 justify-content-center">
-        <div class="col-md-4"><a class="btn btn-primary w-100 py-5 fs-3" href="{{ url_for('web.processing_selection', processing_type='turning') }}">Точение</a></div>
-        <div class="col-md-4"><a class="btn btn-success w-100 py-5 fs-3" href="{{ url_for('web.processing_selection', processing_type='milling') }}">Фрезерование</a></div>
-        <div class="col-md-4"><a class="btn btn-warning w-100 py-5 fs-3" href="{{ url_for('web.processing_selection', processing_type='threading') }}">Резьбонарезание</a></div>
+        {% for processing in processing_types %}
+        <div class="col-md-4">
+            <a class="btn {% if processing.key == 'turning' %}btn-primary{% elif processing.key == 'milling' %}btn-success{% else %}btn-warning{% endif %} w-100 py-5 fs-3" href="{{ url_for('web.processing_selection', processing_type=processing.key) }}">{{ processing.label }}</a>
+            <p class="text-muted small mt-2">{{ processing.description }}</p>
+        </div>
+        {% endfor %}
     </div>
-    <p class="text-center mt-5"><a href="{{ url_for('web.recommended_speed') }}">Все рекомендуемые режимы</a></p>
+    <p class="text-center mt-4"><a href="{{ url_for('web.recommended_speed') }}">Все рекомендуемые режимы</a></p>
+
+    <section class="mt-5">
+        <h2 class="h5">Следующие виды обработки</h2>
+        <p class="text-muted">Они появятся после утверждения формул и полей, чтобы не создавать пустые формы без расчёта.</p>
+        <div class="d-flex flex-wrap gap-2">
+            {% for processing in future_processing_types %}<span class="badge text-bg-light border">{{ processing.label }} — в разработке</span>{% endfor %}
+        </div>
+    </section>
 </main>
 {% endblock %}

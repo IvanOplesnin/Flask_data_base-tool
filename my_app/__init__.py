@@ -49,7 +49,9 @@ def create_app(config_object=None):
     if not application.config.get('DISABLE_DASHBOARDS', False) and not os.environ.get('FLASK_SKIP_DASHBOARDS'):
         from my_app.dashboards.cutting_parameters import create_dash
         from my_app.dashboards.wear import create_dash_wear, create_wear_on_info_experiments
+        from my_app.dashboards.reference import create_reference_dash
         create_dash(application)
         create_dash_wear(application)
         create_wear_on_info_experiments(application)
+        create_reference_dash(application)
     return application

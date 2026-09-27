@@ -6,10 +6,12 @@
     <h1>Импорт результатов экспериментов</h1>
     <a class="btn btn-primary" href="{{ url_for('web.upload_import') }}">Загрузить CSV</a>
   </div>
-  <p>Загрузите таблицу экспериментов и, при необходимости, таблицу точек износа. Данные попадут в базу только после проверки и отдельного подтверждения.</p>
+  <p>Загрузите таблицу экспериментов и, при необходимости, таблицу точек износа. Писатель отправляет данные на проверку, а администратор публикует их для читателей.</p>
   <p>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('web.download_import_template', template_kind='experiments') }}">Шаблон экспериментов</a>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('web.download_import_template', template_kind='wear') }}">Шаблон износа</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('web.download_import_template', template_kind='experiments', language='ru') }}">Русский шаблон экспериментов</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('web.download_import_template', template_kind='wear', language='ru') }}">Русский шаблон износа</a>
   </p>
   <table class="table table-striped align-middle">
     <thead><tr><th>№</th><th>Дата</th><th>Автор</th><th>Файл экспериментов</th><th>Статус</th><th>Результат</th><th></th></tr></thead>
@@ -22,7 +24,9 @@
         <td>{{ batch.experiments_filename }}</td>
         <td>
           {% set badge = {'preview': 'warning', 'invalid': 'danger', 'completed': 'success', 'failed': 'danger'}.get(batch.status, 'secondary') %}
-          <span class="badge text-bg-{{ badge }}">{{ {'preview': 'ожидает подтверждения', 'invalid': 'ошибки проверки', 'completed': 'завершён', 'failed': 'ошибка'}.get(batch.status, batch.status) }}</span>
+          <span class="badge text-bg-{{ badge }}">{{ {'preview': 'ожидает проверки', 'invalid': 'ошибки проверки', 'completed': 'завершён', 'failed': 'ошибка'}.get(batch.status, batch.status) }}</span>
+          {% set review_label = {'pending': 'на проверке', 'published': 'опубликован', 'rejected': 'отклонён'}.get(batch.review_status, batch.review_status) %}
+          <span class="badge text-bg-secondary">{{ review_label }}</span>
         </td>
         <td>{{ batch.imported_experiments }}/{{ batch.experiment_rows }} экспериментов</td>
         <td><a class="btn btn-outline-primary btn-sm" href="{{ url_for('web.import_preview', import_batch_id=batch.id) }}">Подробнее</a></td>

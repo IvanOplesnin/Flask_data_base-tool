@@ -394,6 +394,12 @@
             // Скрываем все формы инструментов при загрузке страницы
             hideAllToolForms();
 
+            var requestedType = {{ selected_tool_type|tojson }};
+            if (requestedType && Array.from(typeToolSelect.options).some(function(option) { return option.value === requestedType; })) {
+                typeToolSelect.value = requestedType;
+                document.getElementById(requestedType + '-form').style.display = 'block';
+            }
+
             typeToolSelect.addEventListener('change', function() {
                 hideAllToolForms();
 
@@ -418,5 +424,4 @@
         });
     </script>
     {% endblock %}
-
 

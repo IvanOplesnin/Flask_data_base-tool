@@ -1,216 +1,233 @@
 {% extends 'base.html' %}
 
 {% block tittle %}
-<style>
-    input[type="range"]::-webkit-slider-runnable-track {
-        width: 100%;
-        height: 8px;
-        cursor: pointer;
-        background: #343a40; /* Цвет линии */
-        border-radius: 4px;
-    }
-    .form-group {
-        margin-bottom: 15px;
-    }
-    .result {
-        font-weight: bold;
-        margin-top: 10px;
-    }
-    .slider-container {
-        margin-bottom: 20px;
-    }
-    .value-container {
-        margin-top: -20px;
-        margin-bottom: 20px;
-    }
-    .results-container {
-        display: flex; /* Размещаем результаты в одну строку */
-        justify-content: space-between; /* Пространство между блоками */
-        align-items: center; /* Выравниваем элементы по центру */
-        border-top: 1px solid #ccc; /* Верхняя граница */
-        border-bottom: 1px solid #ccc; /* Нижняя граница */
-        padding: 10px 0; /* Отступы сверху и снизу */
-        margin-top: 20px; /* Отступ сверху */
-    }
-    .result-block {
-        flex: 1; /* Равное распределение ширины между блоками */
-        text-align: center; /* Центровка текста */
-        padding: 0 10px; /* Отступы внутри блока */
-        position: relative; /* Позиционирование для псевдоэлемента */
-    }
-    .result-block:not(:last-child)::after {
-        content: ''; /* Пустой контент для разделителя */
-        position: absolute; /* Абсолютное позиционирование */
-        top: 0;
-        right: 0; /* Линия справа от блока */
-        width: 1px; /* Ширина линии */
-        height: 100%; /* Высота линии на всю высоту блока */
-        background-color: #ccc; /* Цвет разделительной линии */
-    }
-</style>
+<main class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1>Расчёт режимов: {{ processing_definition.label }}</h1>
+      <p class="text-muted mb-0">{{ processing_definition.description }}</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('web.select_parameters') }}">Изменить вид обработки</a>
+  </div>
 
-<div class="container">
-    <h1 class="mt-4">Параметры резания</h1>
+  <form method="get" id="selection-form" class="row g-3 mb-4" data-processing-form>
+    <div class="col-12">
+      <label class="form-label" for="processing_type">Вид обработки</label>
+      <select class="form-select" name="processing_type" id="processing_type">
+        {% for item in processing_types %}<option value="{{ item.key }}" {% if item.key == processing_type %}selected{% endif %}>{{ item.label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="material_id">1. Обрабатываемый материал</label>
+      <select class="form-select" id="material_id" name="material_id" required>
+        <option value="">Выберите материал</option>
+        {% for material in materials %}<option value="{{ material.id }}" {% if material.id == selected_material %}selected{% endif %}>{{ material.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="tool_id">2. Инструмент</label>
+      <select class="form-select" id="tool_id" name="tool_id" required>
+        <option value="">Выберите инструмент</option>
+        {% for tool in tools %}<option value="{{ tool.id }}" {% if tool.id == selected_tool %}selected{% endif %}>{{ tool.name }}{% if tool.name_easy %} — {{ tool.name_easy }}{% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="coating_id">3. Покрытие</label>
+      <select class="form-select" id="coating_id" name="coating_id" required>
+        <option value="">Выберите покрытие</option>
+        {% for coating in coatings %}<option value="{{ coating.id }}" {% if coating.id == selected_coating %}selected{% endif %}>{{ coating.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-12">
+      <label class="form-label" for="operation_type">4. Тип операции</label>
+      <select class="form-select" id="operation_type" name="operation_type">
+        {% if processing_type == 'turning' %}
+          <option value="roughing">Черновая обработка</option><option value="finishing">Чистовая обработка</option><option value="threading">Резьбонарезание</option>
+        {% elif processing_type == 'milling' %}
+          <option value="contouring">Контурная обработка</option><option value="slotting">Пазование</option><option value="face">Торцевая обработка</option><option value="pocket">Карман</option>
+        {% else %}
+          <option value="external_thread">Наружная резьба</option><option value="internal_thread">Внутренняя резьба</option>
+        {% endif %}
+      </select>
+    </div>
+  </form>
 
-    <!-- Форма выбора параметров -->
-    <form method="GET">
-        <div class="form-group">
-            <label for="processing_type">Вид обработки</label>
-            <select class="form-control" id="processing_type" name="processing_type" onchange="this.form.submit()">
-                <option value="turning" {% if processing_type == 'turning' %}selected{% endif %}>Точение</option>
-                <option value="milling" {% if processing_type == 'milling' %}selected{% endif %}>Фрезерование</option>
-                <option value="threading" {% if processing_type == 'threading' %}selected{% endif %}>Резьбонарезание</option>
-            </select>
-        </div>
-        <!-- Выпадающий список для выбора типа материала -->
-        <div class="form-group">
-            <label for="material_type">Тип материала</label>
-            <select class="form-control" id="material_type" name="material_type">
-                <option value="">Выберите тип материала</option>
-                {% for type in material_types %}
-                <option value="{{ type.id }}" {% if type.id == selected_type %}selected{% endif %}>
-                    {{ type.name }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h4">Параметры расчёта</h2>
+      <p class="text-muted">Расчёт использует введённые значения и коэффициенты материала/инструмента. Силы и мощность рассчитываются, если указаны kc1 и mc; результат нужно подтвердить технологом.</p>
+      <div class="row g-3">
+        <div class="col-md-3"><label class="form-label" for="cutting_speed">Скорость резания Vc, м/мин</label><input class="form-control" id="cutting_speed" type="number" min="0.001" step="any"><div class="form-text">Для точения можно оставить пустым и указать базовую Vc.</div></div>
+        <div class="col-md-3"><label class="form-label" for="diameter">Диаметр, мм</label><input class="form-control" id="diameter" type="number" min="0.001" step="any" required></div>
+        {% if processing_type == 'milling' %}
+          <div class="col-md-3"><label class="form-label" for="number_teeth">Количество зубьев z</label><input class="form-control" id="number_teeth" type="number" min="1" step="1" required></div>
+          <div class="col-md-3"><label class="form-label" for="feed_per_tooth">Подача на зуб fz, мм/зуб</label><input class="form-control" id="feed_per_tooth" type="number" min="0.001" step="any"><div class="form-text">Или задайте базовую fz ниже.</div></div>
+          <div class="col-md-3"><label class="form-label" for="base_feed_per_tooth">Базовая fz, мм/зуб</label><input class="form-control" id="base_feed_per_tooth" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="operation_factor">Коэффициент операции Koperation</label><input class="form-control" id="operation_factor" type="number" min="0.001" step="any" value="1"></div>
+          <div class="col-md-3"><label class="form-label" for="depth_cut">Глубина ap, мм</label><input class="form-control" id="depth_cut" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="width_cut">Ширина ae, мм</label><input class="form-control" id="width_cut" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="kc1">kc1, Н/мм²</label><input class="form-control" id="kc1" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="mc">mc</label><input class="form-control" id="mc" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="chip_thickness">Толщина стружки hm, мм</label><input class="form-control" id="chip_thickness" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="rake_angle">Передний угол γ, °</label><input class="form-control" id="rake_angle" type="number" step="any" value="0"></div>
+          <div class="col-md-3"><label class="form-label" for="max_rpm">Макс. обороты станка</label><input class="form-control" id="max_rpm" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="machine_power">Мощность станка, кВт</label><input class="form-control" id="machine_power" type="number" min="0.001" step="any"></div>
+        {% elif processing_type == 'turning' %}
+          <div class="col-md-3"><label class="form-label" for="feed_per_revolution">Подача на оборот f, мм/об</label><input class="form-control" id="feed_per_revolution" type="number" min="0.001" step="any"><div class="form-text">Или задайте Ra и радиус вершины.</div></div>
+          <div class="col-md-3"><label class="form-label" for="base_cutting_speed">Базовая Vc, м/мин</label><input class="form-control" id="base_cutting_speed" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="roughness">Требуемая Ra, мкм</label><input class="form-control" id="roughness" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="nose_radius">Радиус вершины r, мм</label><input class="form-control" id="nose_radius" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="depth_cut">Глубина ap, мм</label><input class="form-control" id="depth_cut" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="approach_angle">Главный угол KAPR, °</label><input class="form-control" id="approach_angle" type="number" min="1" max="179" step="any" value="90"></div>
+          <div class="col-md-3"><label class="form-label" for="rake_angle">Передний угол γ, °</label><input class="form-control" id="rake_angle" type="number" step="any" value="0"></div>
+          <div class="col-md-3"><label class="form-label" for="kc1">kc1, Н/мм²</label><input class="form-control" id="kc1" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="mc">mc</label><input class="form-control" id="mc" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="stock_allowance">Припуск на сторону, мм</label><input class="form-control" id="stock_allowance" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="length_cut">Длина обработки L, мм</label><input class="form-control" id="length_cut" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="tool_factor">Коэффициент инструмента Ktool</label><input class="form-control" id="tool_factor" type="number" min="0.001" step="any" value="1"></div>
+          <div class="col-md-3"><label class="form-label" for="operation_factor">Коэффициент операции Koperation</label><input class="form-control" id="operation_factor" type="number" min="0.001" step="any" value="1"></div>
+          <div class="col-md-3"><label class="form-label" for="coolant_factor">Коэффициент СОЖ Kcoolant</label><input class="form-control" id="coolant_factor" type="number" min="0.001" step="any"><div class="form-text">Пусто — выбрать по виду СОЖ.</div></div>
+          <div class="col-md-3"><label class="form-label" for="stiffness_factor">Коэффициент жёсткости Kstiffness</label><input class="form-control" id="stiffness_factor" type="number" min="0.001" step="any" value="1"></div>
+          <div class="col-md-3"><label class="form-label" for="max_rpm">Макс. обороты станка</label><input class="form-control" id="max_rpm" type="number" min="0.001" step="any"></div>
+          <div class="col-md-3"><label class="form-label" for="machine_power">Мощность станка, кВт</label><input class="form-control" id="machine_power" type="number" min="0.001" step="any"></div>
+        {% else %}
+          <div class="col-md-3"><label class="form-label" for="pitch">Шаг резьбы, мм</label><input class="form-control" id="pitch" type="number" min="0.001" step="any" required></div>
+          <div class="col-md-3"><label class="form-label" for="max_rpm">Макс. обороты станка</label><input class="form-control" id="max_rpm" type="number" min="0.001" step="any"></div>
+        {% endif %}
+        <div class="col-md-3"><label class="form-label" for="coolant">СОТС</label><select class="form-select" id="coolant"><option value="emulsion">Эмульсия</option><option value="oil">Масло</option><option value="air">Обдув</option><option value="none">Сухая обработка</option></select></div>
+        <div class="col-12"><button type="button" class="btn btn-success" id="calculate-processing">Рассчитать</button></div>
+        <div class="col-12"><div id="reference-status" class="form-text">Выберите материал, инструмент и покрытие — параметры подставятся из справочника.</div></div>
+      </div>
+      <div id="calculation-errors" class="alert alert-danger mt-3 d-none"></div>
+      <div id="calculation-result" class="mt-3"></div>
+    </div>
+  </section>
 
-        <!-- Выпадающий список для выбора материала -->
-        <div class="form-group">
-            <label for="material">Материал</label>
-            <select class="form-control" id="material" name="material" disabled>
-                <option value="">Сначала выберите тип материала</option>
-            </select>
-        </div>
+  {% if processing_type == 'milling' %}
+  <section class="card">
+    <div class="card-body">
+      <h2 class="h4">Расчётные графики фрезерования</h2>
+      <p class="text-muted">Это динамический график расчётной модели. Экспериментальные графики находятся в разделе «Эксперименты».</p>
+      <div id="dash-container" style="height: 720px;"><iframe src="/dash/" width="100%" height="100%" frameborder="0" title="Расчётные графики"></iframe></div>
+    </div>
+  </section>
+  {% endif %}
+</main>
 
-        <div class="form-group">
-            <label for="tool">Инструмент</label>
-            <select class="form-control" id="tool" name="tool">
-                {% for tool in tools %}
-                <option value="{{ tool.id }}" {% if tool.id == selected_tool %}selected{% endif %}>
-                    {{ tool.name }}, {{ tool.name_easy }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="coating">Покрытие</label>
-            <select class="form-control" id="coating" name="coating">
-                {% for coating in coatings %}
-                <option value="{{ coating.id }}" {% if coating.id == selected_coating %}selected{% endif %}>
-                    {{ coating.name }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div id="recommended-parameters">
-
-        </div>
-        <div id="dash-container" style="height: 100vh;">
-            <iframe src="/dash/" width="100%" height="100%" frameborder="0"></iframe>
-        </div>
-    </form>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var materialTypeSelect = document.getElementById('material_type');
-    var materialSelect = document.getElementById('material');
-    var toolSelect = document.getElementById('tool');
-    var coatingSelect = document.getElementById('coating');
+document.addEventListener('DOMContentLoaded', function () {
+  const processingType = {{ processing_type|tojson }};
+  const form = document.getElementById('selection-form');
+  const result = document.getElementById('calculation-result');
+  const errors = document.getElementById('calculation-errors');
+  const referenceStatus = document.getElementById('reference-status');
+  const fields = ['material_id', 'tool_id', 'coating_id'];
+  const referenceFields = {
+    base_cutting_speed: 'base_cutting_speed',
+    base_feed_per_tooth: 'base_feed_per_tooth',
+    base_feed_per_revolution: 'feed_per_revolution',
+    kc1: 'kc1',
+    mc: 'mc',
+    rake_angle: 'rake_angle'
+  };
 
-    // Обработчик изменения типа материала
-    materialTypeSelect.addEventListener('change', function() {
-        updateMaterialOptions();
+  function selectedReferenceIds() {
+    return {
+      material_id: document.getElementById('material_id').value,
+      tool_id: document.getElementById('tool_id').value,
+      coating_id: document.getElementById('coating_id').value
+    };
+  }
+
+  function updateCuttingReference() {
+    const ids = selectedReferenceIds();
+    if (!ids.material_id || !ids.tool_id || !ids.coating_id) {
+      referenceStatus.textContent = 'Выберите материал, инструмент и покрытие — параметры подставятся из справочника.';
+      return;
+    }
+    const query = new URLSearchParams(ids).toString();
+    fetch('/api/cutting-reference?' + query)
+      .then(function (response) { return response.json(); })
+      .then(function (data) {
+        if (!data.found) {
+          referenceStatus.textContent = 'Для выбранной комбинации нет записи справочника. Можно ввести параметры вручную.';
+          return;
+        }
+        const reference = data.reference || {};
+        Object.keys(referenceFields).forEach(function (referenceKey) {
+          const field = document.getElementById(referenceFields[referenceKey]);
+          if (!field || reference[referenceKey] === undefined) return;
+          if (!field.value || field.dataset.autoFilled === 'true') {
+            field.value = reference[referenceKey];
+            field.dataset.autoFilled = 'true';
+          }
+        });
+        referenceStatus.textContent = 'Параметры подставлены из справочника: ' + (reference.material_name || '') + ' / ' + (reference.tool_name || '') + ' / ' + (reference.coating_name || '') + '. Ручное значение имеет приоритет.';
+      })
+      .catch(function () {
+        referenceStatus.textContent = 'Не удалось загрузить справочник. Параметры можно ввести вручную.';
+      });
+  }
+
+  document.querySelectorAll('[data-processing-form]').forEach(function (processingForm) {
+    processingForm.addEventListener('change', function (event) {
+      if (event.target.id === 'processing_type') {
+        fields.forEach(function (id) { const field = document.getElementById(id); if (field) field.value = ''; });
+        form.submit();
+      }
     });
+  });
 
-    // Обработчики изменений для всех элементов формы
-    materialSelect.addEventListener('change', updateCoefficients);
-    toolSelect.addEventListener('change', updateCoefficients);
-    coatingSelect.addEventListener('change', updateCoefficients);
+  ['material_id', 'tool_id', 'coating_id'].forEach(function (id) {
+    const field = document.getElementById(id);
+    if (!field) return;
+    field.addEventListener('change', function () {
+      updateCuttingReference();
+      if (processingType !== 'milling') return;
+      const material = document.getElementById('material_id').value;
+      const tool = document.getElementById('tool_id').value;
+      const coating = document.getElementById('coating_id').value;
+      if (!material || !tool || !coating) return;
+      fetch('/update_graph_data', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({material_id: material, tool_id: tool, coating_id: coating}) })
+        .then(function (response) { if (!response.ok) throw new Error('Не удалось обновить коэффициенты графика.'); return response.json(); })
+        .then(function () { const iframe = document.querySelector('#dash-container iframe'); if (iframe) iframe.contentWindow.location.reload(); })
+        .catch(function () { /* Ошибка отображается в расчёте после ввода параметров. */ });
+    });
+  });
 
-    function updateMaterialOptions() {
-        var typeId = materialTypeSelect.value;
+  Object.keys(referenceFields).forEach(function (referenceKey) {
+    const field = document.getElementById(referenceFields[referenceKey]);
+    if (!field) return;
+    field.addEventListener('input', function () { field.dataset.autoFilled = 'false'; });
+  });
 
-        if (typeId) {
-            fetch(`/materials/by_type/${typeId}`)
-                .then(response => response.json())
-                .then(data => {
-                    materialSelect.innerHTML = '<option value="">Выберите материал</option>';
-                    data.forEach(material => {
-                        var option = document.createElement('option');
-                        option.value = material.id;
-                        option.textContent = material.name;
-                        materialSelect.appendChild(option);
-                    });
-                    materialSelect.disabled = false;
-                });
-        } else {
-            materialSelect.innerHTML = '<option value="">Сначала выберите тип материала</option>';
-            materialSelect.disabled = true;
-        }
+  updateCuttingReference();
 
-        updateCoefficients(); // Обновляем коэффициенты при изменении типа материала
-    }
-
-    function updateCoefficients() {
-        var materialId = materialSelect.value;
-        var toolId = toolSelect.value;
-        var coatingId = coatingSelect.value;
-
-        if (materialId && toolId && coatingId) {
-            fetch(`/update_graph_data`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    material_id: materialId,
-                    tool_id: toolId,
-                    coating_id: coatingId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    var iframe = document.querySelector('#dash-container iframe');
-                    iframe.contentWindow.location.reload(); // Перезагрузка iframe для обновления графика и результатов
-
-                    // Обновляем отображение рекомендуемых параметров
-                    var recommendedData = data.recommended_data;
-                    var recommendedDiv = document.getElementById('recommended-parameters');
-                    if (recommendedData) {
-                        // Создаем HTML для отображения рекомендуемых параметров
-                        var html = '<h3>Рекомендуемые режимы резания</h3>';
-                        html += '<table class="table table-striped table-bordered"><tbody>';
-                        html += '<tr><th>Обороты шпинделя, об/мин</th><td>' + recommendedData.spindle_speed + '</td></tr>';
-                        html += '<tr><th>Скорость резания, м/мин</th><td>' + recommendedData.cutting_speed + '</td></tr>';
-                        html += '<tr><th>Подача, мм/мин</th><td>' + recommendedData.feed_rate + '</td></tr>';
-                        html += '<tr><th>Подача на зуб, мм/зуб</th><td>' + recommendedData.feed_per_tooth + '</td></tr>';
-                        html += '<tr><th>Силы резания, Н</th><td>' + recommendedData.cutting_force + '</td></tr>';
-                        html += '<tr><th>Температура, °C</th><td>' + recommendedData.temperature + '</td></tr>';
-                        html += '<tr><th>Стойкость, мин</th><td>' + recommendedData.durability + '</td></tr>';
-                        html += '</tbody></table>';
-                        recommendedDiv.innerHTML = html;
-                    } else {
-                        recommendedDiv.innerHTML = '<p>Рекомендуемые режимы резания не найдены для выбранных параметров.</p>';
-                    }
-                } else {
-                    console.error('Ошибка при получении данных');
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка:', error);
-            });
-        } else {
-            // Если не все параметры выбраны, очищаем блок рекомендуемых параметров
-            var recommendedDiv = document.getElementById('recommended-parameters');
-            recommendedDiv.innerHTML = '';
-        }
-    }
-
-    // Инициализируем коэффициенты при загрузке страницы
-    updateCoefficients();
+  document.getElementById('calculate-processing').addEventListener('click', function () {
+    errors.classList.add('d-none');
+    result.innerHTML = '';
+    const payload = { cutting_speed: document.getElementById('cutting_speed').value, diameter: document.getElementById('diameter').value, coolant: document.getElementById('coolant').value };
+    Object.assign(payload, selectedReferenceIds());
+    const material = document.getElementById('material_id');
+    if (material && material.selectedOptions[0]) payload.material = material.selectedOptions[0].textContent;
+    ['number_teeth', 'feed_per_tooth', 'base_feed_per_tooth', 'operation_factor', 'depth_cut', 'width_cut', 'feed_per_revolution', 'base_cutting_speed', 'roughness', 'nose_radius', 'approach_angle', 'pitch', 'kc1', 'mc', 'chip_thickness', 'rake_angle', 'tool_factor', 'coolant_factor', 'stiffness_factor', 'stock_allowance', 'length_cut', 'max_rpm', 'machine_power'].forEach(function (id) { const field = document.getElementById(id); if (field) payload[id] = field.value; });
+    fetch('/api/calculate/' + processingType, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) })
+      .then(function (response) { return response.json().then(function (data) { return {ok: response.ok, data: data}; }); })
+      .then(function (response) {
+        if (!response.ok) { throw new Error(response.data.error || 'Не удалось выполнить расчёт.'); }
+        const data = response.data;
+        let html = '<div class="table-responsive"><table class="table table-bordered"><tbody>';
+        html += '<tr><th>Обороты шпинделя, об/мин</th><td>' + Number(data.spindle_speed).toFixed(2) + '</td></tr>';
+        html += '<tr><th>Минутная подача, мм/мин</th><td>' + Number(data.feed_rate).toFixed(2) + '</td></tr>';
+        html += '<tr><th>Скорость резания, м/мин</th><td>' + Number(data.cutting_speed).toFixed(2) + '</td></tr>';
+        const labels = {feed_per_tooth: 'Подача на зуб, мм/зуб', predicted_roughness: 'Прогноз Ra, мкм', rctf: 'RCTF', material_removal_rate_mm3_min: 'Объём съёма, мм³/мин', cutting_force_n: 'Сила резания, Н', specific_cutting_force: 'Удельная сила kc, Н/мм²', cutting_power_kw: 'Мощность резания, кВт', cutting_moment_nm: 'Момент, Н·м', passes: 'Количество проходов', time_per_pass_min: 'Время одного прохода, мин', total_time_min: 'Общее время, мин', effective_spindle_speed: 'Ограниченные обороты, об/мин'};
+        if (data.extra) Object.keys(labels).forEach(function (key) { if (data.extra[key] !== undefined) html += '<tr><th>' + labels[key] + '</th><td>' + Number(data.extra[key]).toFixed(3) + '</td></tr>'; });
+        html += '</tbody></table></div>';
+        if (data.warnings && data.warnings.length) html += '<div class="alert alert-warning">' + data.warnings.join('<br>') + '</div>';
+        result.innerHTML = html;
+      })
+      .catch(function (error) { errors.textContent = error.message; errors.classList.remove('d-none'); });
+  });
 });
 </script>
-</div>
 {% endblock %}

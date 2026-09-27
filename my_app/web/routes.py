@@ -8,12 +8,25 @@ from sqlalchemy.orm import joinedload
 
 from my_app.extensions import db
 from my_app.forms import MaterialForm, CoatingForm, MillingGeometryForm, TurningGeometryForm, DrillGeometryForm, \
-    ConfirmImportForm, DeleteConfirmationForm, ExperimentForm, ImportUploadForm, LoginForm, TapForm, ToolForm, UserForm
+    ConfirmImportForm, DeleteConfirmationForm, ExperimentForm, ImportUploadForm, InsertForm, LoginForm, TapForm, ToolForm, UserForm
 from my_app.models import Material, Tool, Coating, Experiment, RecommendationParameter, Adhesive, Coefficient, \
     ImportBatch, MaterialType, MillingGeometry, WearMeasurement, DrillGeometry, TurningGeometry, Insert, TapGeometry, User
 from my_app.security import roles_required
 from my_app.services.calculations import calculate_cutting_parameters
+from my_app.services.cutting_calculations import (
+    CalculationInputError,
+    calculate_milling,
+    calculate_threading,
+    calculate_turning,
+)
+from my_app.services.cutting_reference import get_cutting_reference
 from my_app.services.experiment_import import ImportFileError, csv_template, issues_summary, save_uploaded_import_files, validate_import_files
+from my_app.services.processing import (
+    FUTURE_PROCESSING_TYPES,
+    PROCESSING_TYPES,
+    get_processing,
+    is_available_processing,
+)
 
 web_bp = Blueprint('web', __name__)
 
@@ -105,6 +118,8 @@ def _record_preview_result(import_batch, preview):
     import_batch.error_count = preview.error_count
     import_batch.errors_summary = issues_summary(preview)
     import_batch.status = 'preview' if preview.is_valid else 'invalid'
+    if preview.is_valid and import_batch.review_status == 'published':
+        import_batch.review_status = 'pending'
 
 
 @web_bp.route('/imports')
@@ -156,6 +171,7 @@ def import_preview(import_batch_id):
         import_batch=import_batch,
         issues=(import_batch.errors_summary or '').splitlines(),
         confirm_form=ConfirmImportForm(),
+        can_publish=current_user.role == 'admin',
     )
 
 
@@ -189,9 +205,15 @@ def confirm_import(import_batch_id):
 
     try:
         experiments_by_external_id = {}
+        publication_status = 'published' if current_user.role == 'admin' else 'draft'
         for values in preview.experiments:
             external_id = values.pop('external_id')
-            experiment = Experiment(external_id=external_id, import_batch=import_batch, **values)
+            experiment = Experiment(
+                external_id=external_id,
+                import_batch=import_batch,
+                publication_status=publication_status,
+                **values,
+            )
             db.session.add(experiment)
             experiments_by_external_id[external_id] = experiment
         db.session.flush()
@@ -200,6 +222,10 @@ def confirm_import(import_batch_id):
             db.session.add(WearMeasurement(experiment_id=experiment.id, length=values['length'], wear=values['wear']))
 
         import_batch.status = 'completed'
+        import_batch.review_status = 'published' if current_user.role == 'admin' else 'pending'
+        if current_user.role == 'admin':
+            import_batch.reviewed_by_id = current_user.id
+            import_batch.reviewed_at = datetime.utcnow()
         import_batch.imported_experiments = len(preview.experiments)
         import_batch.imported_wear = len(preview.wear_measurements)
         import_batch.error_count = 0
@@ -217,6 +243,48 @@ def confirm_import(import_batch_id):
         return redirect(url_for('web.import_preview', import_batch_id=import_batch_id))
 
     flash(f'Импорт завершён: экспериментов — {import_batch.imported_experiments}, точек износа — {import_batch.imported_wear}.', 'success')
+    if current_user.role != 'admin':
+        flash('Импорт отправлен администратору на проверку. До публикации он не виден читателям.', 'info')
+    return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+
+
+@web_bp.route('/imports/<int:import_batch_id>/publish', methods=['POST'])
+@roles_required('admin')
+def publish_import(import_batch_id):
+    """Публикует импорт после проверки администратором."""
+
+    import_batch = db.get_or_404(ImportBatch, import_batch_id)
+    if import_batch.status != 'completed' or import_batch.review_status not in {'pending', 'rejected'}:
+        flash('Опубликовать можно только завершённый импорт, ожидающий проверки.', 'warning')
+        return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+    for experiment in import_batch.experiments:
+        experiment.publication_status = 'published'
+    import_batch.review_status = 'published'
+    import_batch.reviewed_by_id = current_user.id
+    import_batch.reviewed_at = datetime.utcnow()
+    import_batch.review_comment = None
+    db.session.commit()
+    flash('Импорт опубликован. Эксперименты доступны читателям.', 'success')
+    return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+
+
+@web_bp.route('/imports/<int:import_batch_id>/reject', methods=['POST'])
+@roles_required('admin')
+def reject_import(import_batch_id):
+    """Скрывает импорт и оставляет его в журнале с причиной отказа."""
+
+    import_batch = db.get_or_404(ImportBatch, import_batch_id)
+    if import_batch.status != 'completed' or import_batch.review_status != 'pending':
+        flash('Отклонить можно только импорт, ожидающий проверки.', 'warning')
+        return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
+    import_batch.review_status = 'rejected'
+    import_batch.reviewed_by_id = current_user.id
+    import_batch.reviewed_at = datetime.utcnow()
+    import_batch.review_comment = (request.form.get('review_comment') or '').strip()[:2000] or None
+    for experiment in import_batch.experiments:
+        experiment.publication_status = 'rejected'
+    db.session.commit()
+    flash('Импорт отклонён и скрыт от читателей.', 'warning')
     return redirect(url_for('web.import_preview', import_batch_id=import_batch.id))
 
 
@@ -240,10 +308,14 @@ def download_import_file(import_batch_id, file_kind):
 @roles_required('admin', 'writer')
 def download_import_template(template_kind):
     try:
-        content = '\ufeff' + csv_template(template_kind)
+        language = request.args.get('language', 'technical')
+        if language not in {'technical', 'ru'}:
+            abort(400)
+        content = '\ufeff' + csv_template(template_kind, language=language)
     except KeyError:
         abort(404)
-    filename = f'{template_kind}_template.csv'
+    suffix = '_ru' if language == 'ru' else ''
+    filename = f'{template_kind}_template{suffix}.csv'
     return Response(
         content,
         content_type='text/csv; charset=utf-8',
@@ -253,13 +325,14 @@ def download_import_template(template_kind):
 
 @web_bp.route('/processing/<processing_type>')
 def processing_selection(processing_type):
-    labels = {'turning': 'Точение', 'milling': 'Фрезерование', 'threading': 'Резьбонарезание'}
-    if processing_type not in labels:
+    definition = get_processing(processing_type)
+    if definition is None or not definition.available:
         return jsonify(error='Неизвестный вид обработки'), 404
     return render_template(
         'processing_selection.html',
         processing_type=processing_type,
-        processing_label=labels[processing_type],
+        processing_label=definition.label,
+        processing_definition=definition,
         materials=Material.query.order_by(Material.name).all(),
         tools=Tool.query.filter_by(processing_type=processing_type).order_by(Tool.name).all(),
         coatings=Coating.query.order_by(Coating.name).all(),
@@ -272,8 +345,14 @@ def select_parameters():
     unique_tools = Tool.query.join(RecommendationParameter).distinct().all()
     unique_coatings = Coating.query.join(RecommendationParameter).distinct().all()
 
-    return render_template('home.html', unique_materials=unique_materials, unique_tools=unique_tools,
-                           unique_coatings=unique_coatings)
+    return render_template(
+        'home.html',
+        unique_materials=unique_materials,
+        unique_tools=unique_tools,
+        unique_coatings=unique_coatings,
+        processing_types=PROCESSING_TYPES,
+        future_processing_types=FUTURE_PROCESSING_TYPES,
+    )
 
 
 @web_bp.route('/recommended_speed', methods=['POST', 'GET'])
@@ -467,7 +546,8 @@ def add():
 
     return render_template('add.html', material_form=material_form, coating_form=coating_form,
                            milling_geometry_form=milling_geometry_form, turning_form=turning_form,
-                           drill_form=drill_form, tap_form=tap_form)
+                           drill_form=drill_form, tap_form=tap_form,
+                           selected_tool_type=request.args.get('tool_type', 'milling'))
 
 
 @web_bp.route('/materials', methods=['GET', 'POST'])
@@ -583,6 +663,99 @@ def calculate():
         'cutting_temperature': result.cutting_temperature,
         'tool_life': result.tool_life,
     })
+
+
+@web_bp.route('/api/cutting-reference')
+def cutting_reference():
+    """Возвращает исходные режимы и Kienzle-коэффициенты выбранной тройки."""
+
+    material_id = request.args.get('material_id', type=int)
+    tool_id = request.args.get('tool_id', type=int)
+    coating_id = request.args.get('coating_id', type=int)
+    if not all((material_id, tool_id, coating_id)):
+        return jsonify(error='material_id, tool_id и coating_id обязательны'), 400
+
+    reference = get_cutting_reference(material_id, tool_id, coating_id)
+    if reference is None:
+        return jsonify(found=False, reference={})
+    return jsonify(found=True, reference=reference.as_dict())
+
+
+@web_bp.route('/api/calculate/<processing_type>', methods=['POST'])
+def calculate_processing(processing_type):
+    """Рассчитывает базовые режимы по контракту выбранной операции."""
+
+    if not is_available_processing(processing_type):
+        return jsonify(error='Для этого вида обработки расчёт ещё не реализован.'), 400
+    payload = request.get_json(silent=True) or request.form.to_dict()
+    reference = get_cutting_reference(
+        payload.get('material_id'),
+        payload.get('tool_id'),
+        payload.get('coating_id'),
+    )
+    reference_data = reference.as_dict() if reference else {}
+
+    def value_or_reference(name: str):
+        value = payload.get(name)
+        return value if value not in (None, '') else reference_data.get(name)
+
+    try:
+        if processing_type == 'milling':
+            result = calculate_milling(
+                cutting_speed=value_or_reference('cutting_speed') or value_or_reference('base_cutting_speed'),
+                diameter=payload.get('diameter'),
+                number_teeth=payload.get('number_teeth'),
+                feed_per_tooth=payload.get('feed_per_tooth'),
+                base_feed_per_tooth=value_or_reference('base_feed_per_tooth'),
+                operation_factor=payload.get('operation_factor'),
+                depth_cut=payload.get('depth_cut'),
+                width_cut=payload.get('width_cut'),
+                coolant=payload.get('coolant'),
+                material=payload.get('material') or reference_data.get('material_name'),
+                coolant_factor=payload.get('coolant_factor'),
+                kc1=value_or_reference('kc1'),
+                mc=value_or_reference('mc'),
+                chip_thickness=payload.get('chip_thickness'),
+                rake_angle=value_or_reference('rake_angle'),
+                max_rpm=payload.get('max_rpm'),
+                machine_power=payload.get('machine_power'),
+            )
+        elif processing_type == 'turning':
+            result = calculate_turning(
+                cutting_speed=payload.get('cutting_speed'),
+                base_cutting_speed=value_or_reference('base_cutting_speed'),
+                diameter=payload.get('diameter'),
+                feed_per_revolution=payload.get('feed_per_revolution') or reference_data.get('base_feed_per_revolution'),
+                roughness=payload.get('roughness'),
+                nose_radius=payload.get('nose_radius'),
+                depth_cut=payload.get('depth_cut'),
+                approach_angle=payload.get('approach_angle'),
+                rake_angle=value_or_reference('rake_angle'),
+                kc1=value_or_reference('kc1'),
+                mc=value_or_reference('mc'),
+                tool_factor=payload.get('tool_factor'),
+                operation_factor=payload.get('operation_factor'),
+                coolant_factor=payload.get('coolant_factor'),
+                stiffness_factor=payload.get('stiffness_factor'),
+                stock_allowance=payload.get('stock_allowance'),
+                length_cut=payload.get('length_cut'),
+                max_rpm=payload.get('max_rpm'),
+                machine_power=payload.get('machine_power'),
+                coolant=payload.get('coolant'),
+                material=payload.get('material') or reference_data.get('material_name'),
+            )
+        else:
+            result = calculate_threading(
+                cutting_speed=payload.get('cutting_speed'),
+                diameter=payload.get('diameter'),
+                pitch=payload.get('pitch'),
+                max_rpm=payload.get('max_rpm'),
+                coolant=payload.get('coolant'),
+                material=payload.get('material'),
+            )
+    except CalculationInputError as error:
+        return jsonify(error=str(error)), 400
+    return jsonify(result.as_dict())
 
 
 @web_bp.route('/materials/<int:material_id>/delete', methods=['POST'])
@@ -753,6 +926,30 @@ def inserts_catalog():
         page=request.args.get('page', 1, type=int), per_page=20, error_out=False
     )
     return render_template('tool_catalog.html', title='Режущие пластины', items=pagination.items, pagination=pagination, item_type='insert')
+
+
+@web_bp.route('/catalog/inserts/add', methods=['GET', 'POST'])
+@roles_required('admin', 'writer')
+def add_insert():
+    form = InsertForm()
+    if form.validate_on_submit():
+        insert = Insert(
+            name=form.name.data,
+            material=form.material.data,
+            geometry=form.geometry.data,
+            rake_angle=form.rake_angle.data,
+            relief_angle=form.relief_angle.data,
+        )
+        db.session.add(insert)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            flash('Не удалось добавить пластину: такое обозначение уже существует.', 'danger')
+        else:
+            flash('Режущая пластина добавлена.', 'success')
+            return redirect(url_for('web.inserts_catalog'))
+    return render_template('insert_form.html', form=form)
 
 
 @web_bp.route('/catalog/taps')
@@ -966,7 +1163,10 @@ def experiments_table():
     order = request.args.get('order', 'asc')
 
     experiments_query = Experiment.query.options(joinedload(Experiment.material), joinedload(Experiment.coating),
-                                                  joinedload(Experiment.tool)).all()
+                                                  joinedload(Experiment.tool))
+    if current_user.is_authenticated and current_user.role == 'reader':
+        experiments_query = experiments_query.filter(Experiment.publication_status == 'published')
+    experiments_query = experiments_query.all()
 
     # Фильтрация уже в Python
     if material_filter:
@@ -1009,6 +1209,11 @@ def experiments_table():
                            sort_by=sort_by,
                            order=order,
                            request_args=request.args)
+
+
+@web_bp.route('/experiments/reference')
+def experiments_reference_graphs():
+    return render_template('reference_graphs.html')
 
 
 @web_bp.route('/experiments/<int:experiment_id>/delete', methods=['POST'])
@@ -1075,6 +1280,9 @@ def add_experiment():
 @web_bp.route("/experiments/<int:experiment_id>/info")
 def experiments_info(experiment_id):
     experiment = Experiment.query.get_or_404(experiment_id)
+    if (current_user.is_authenticated and current_user.role == 'reader'
+            and experiment.publication_status != 'published'):
+        abort(404)
     return render_template('experiment_info.html', experiment=experiment)
 
 
@@ -1123,7 +1331,7 @@ def adhesive():
 @web_bp.route("/expected_parameters", methods=['GET', 'POST'])
 def expected_parameters():
     processing_type = request.args.get('processing_type', 'milling')
-    if processing_type not in {'turning', 'milling', 'threading'}:
+    if not is_available_processing(processing_type):
         processing_type = 'milling'
 
     materials = Material.query.order_by(Material.name).all()
@@ -1134,6 +1342,16 @@ def expected_parameters():
     selected_material = request.args.get('material_id', type=int)
     selected_tool = request.args.get('tool_id', type=int)
     selected_coating = request.args.get('coating_id', type=int)
+    # Серверная защита от устаревших ID: клиентский сброс не должен быть
+    # единственной гарантией при ручном изменении query-параметров.
+    if selected_material and db.session.get(Material, selected_material) is None:
+        selected_material = None
+    if selected_coating and db.session.get(Coating, selected_coating) is None:
+        selected_coating = None
+    if selected_tool:
+        selected_tool_record = db.session.get(Tool, selected_tool)
+        if selected_tool_record is None or selected_tool_record.processing_type != processing_type:
+            selected_tool = None
     coefficient = None
 
     return render_template(
@@ -1147,6 +1365,8 @@ def expected_parameters():
         selected_coating=selected_coating,
         material_types=material_types,
         processing_type=processing_type,
+        processing_definition=get_processing(processing_type),
+        processing_types=PROCESSING_TYPES,
     )
 
 

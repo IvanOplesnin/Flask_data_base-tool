@@ -13,10 +13,10 @@ from .forms import (
     TapForm,
     DeleteConfirmationForm,
     ConfirmImportForm,
-    ImportUploadForm,
+    ImportUploadForm, InsertForm,
 )
 
 __all__ = [
     'CoatingForm', 'DrillGeometryForm', 'ExperimentForm', 'MaterialForm',
-    'ConfirmImportForm', 'DeleteConfirmationForm', 'ImportUploadForm', 'LoginForm', 'MillingGeometryForm', 'TapForm', 'ToolForm', 'TurningGeometryForm', 'UserForm',
+    'ConfirmImportForm', 'DeleteConfirmationForm', 'ImportUploadForm', 'InsertForm', 'LoginForm', 'MillingGeometryForm', 'TapForm', 'ToolForm', 'TurningGeometryForm', 'UserForm',
 ]

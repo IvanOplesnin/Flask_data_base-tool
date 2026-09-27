@@ -3,12 +3,12 @@
 {% block tittle %}
 <main class="container py-4">
     <h1>{{ processing_label }}</h1>
-    <p>Выберите материал, инструмент и покрытие. В списке оставлены только совместимые инструменты.</p>
-    <form method="get" action="{{ url_for('web.expected_parameters') }}" class="row g-3">
+    <p>{{ processing_definition.description }}. Выберите материал, инструмент и покрытие. В списке оставлены только совместимые инструменты.</p>
+    <form method="get" action="{{ url_for('web.expected_parameters') }}" class="row g-3" data-processing-form>
         <input type="hidden" name="processing_type" value="{{ processing_type }}">
-        <div class="col-md-4"><label class="form-label">Материал</label><select class="form-select" name="material_id">{% for material in materials %}<option value="{{ material.id }}">{{ material.name }}</option>{% endfor %}</select></div>
-        <div class="col-md-4"><label class="form-label">Инструмент</label><select class="form-select" name="tool_id">{% for tool in tools %}<option value="{{ tool.id }}">{{ tool.name }}</option>{% endfor %}</select></div>
-        <div class="col-md-4"><label class="form-label">Покрытие</label><select class="form-select" name="coating_id">{% for coating in coatings %}<option value="{{ coating.id }}">{{ coating.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-4"><label class="form-label" for="material_id">1. Обрабатываемый материал</label><select class="form-select" id="material_id" name="material_id" required><option value="">Выберите материал</option>{% for material in materials %}<option value="{{ material.id }}">{{ material.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-4"><label class="form-label" for="tool_id">2. Инструмент</label><select class="form-select" id="tool_id" name="tool_id" required><option value="">Выберите инструмент</option>{% for tool in tools %}<option value="{{ tool.id }}">{{ tool.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-4"><label class="form-label" for="coating_id">3. Покрытие</label><select class="form-select" id="coating_id" name="coating_id" required><option value="">Выберите покрытие</option>{% for coating in coatings %}<option value="{{ coating.id }}">{{ coating.name }}</option>{% endfor %}</select></div>
         <div class="col-12"><button class="btn btn-primary">Перейти к расчёту</button></div>
     </form>
 </main>

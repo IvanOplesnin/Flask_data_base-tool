@@ -123,6 +123,9 @@ class Insert(db.Model):
     tool_id = db.Column(db.Integer, db.ForeignKey('tools.id'))
     name = db.Column(sa.String(64))
     material = db.Column(sa.String(64))
+    geometry = db.Column(sa.String(128))
+    rake_angle = db.Column(sa.Float)
+    relief_angle = db.Column(sa.Float)
 
     tool = db.relationship('Tool', back_populates='insert')
 
@@ -197,6 +200,10 @@ class Experiment(db.Model):
     csv_id = db.Column(db.Integer, db.ForeignKey(CsvFile.id))
     external_id = db.Column(sa.String(64), unique=True, index=True)
     import_batch_id = db.Column(db.Integer, db.ForeignKey('import_batches.id', ondelete='SET NULL'))
+    # Ручные эксперименты считаются опубликованными. Импорт писателя сначала
+    # получает статус draft и становится виден читателям только после решения
+    # администратора.
+    publication_status = db.Column(sa.String(16), nullable=False, default='published', index=True)
     data_experiment = db.Column(db.Date)
     date_recording = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -233,6 +240,10 @@ class ImportBatch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     uploader_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
     status = db.Column(sa.String(16), nullable=False, default='preview', index=True)
+    review_status = db.Column(sa.String(16), nullable=False, default='published', index=True)
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
+    reviewed_at = db.Column(db.DateTime)
+    review_comment = db.Column(sa.Text)
     experiments_filename = db.Column(sa.String(255), nullable=False)
     wear_filename = db.Column(sa.String(255))
     experiments_path = db.Column(sa.String(512), nullable=False, unique=True)
@@ -247,7 +258,8 @@ class ImportBatch(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
 
-    uploaded_by = db.relationship('User', back_populates='import_batches')
+    uploaded_by = db.relationship('User', foreign_keys=[uploader_id], back_populates='import_batches')
+    reviewed_by = db.relationship('User', foreign_keys=[reviewed_by_id])
     experiments = db.relationship('Experiment', back_populates='import_batch')
 
 
@@ -342,6 +354,15 @@ class Coefficient(db.Model):
     cutting_temperature_coefficient = db.Column(db.Float, nullable=False)
     durability_coefficient = db.Column(db.Float, nullable=False)
 
+    # Коэффициенты и базовые режимы для модели Kienzle/Victor. Они отделены
+    # от исторических эмпирических коэффициентов выше: смешивать эти модели
+    # в одном расчёте нельзя.
+    kc1 = db.Column(db.Float)
+    mc = db.Column(db.Float)
+    base_cutting_speed = db.Column(db.Float)
+    base_feed_per_tooth = db.Column(db.Float)
+    base_feed_per_revolution = db.Column(db.Float)
+
     material = db.relationship('Material', backref=db.backref('coefficients', lazy='dynamic'))
     tool = db.relationship('Tool', backref=db.backref('coefficients', lazy='dynamic'))
     coating = db.relationship('Coating', backref=db.backref('coefficients', lazy='dynamic'))
@@ -372,7 +393,11 @@ class User(UserMixin, db.Model):
     username = db.Column(sa.String(64), unique=True, nullable=False, index=True)
     password_hash = db.Column(sa.String(256), nullable=False)
     role = db.Column(sa.String(16), nullable=False, default='reader', index=True)
-    import_batches = db.relationship('ImportBatch', back_populates='uploaded_by')
+    import_batches = db.relationship(
+        'ImportBatch',
+        foreign_keys='ImportBatch.uploader_id',
+        back_populates='uploaded_by',
+    )
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)

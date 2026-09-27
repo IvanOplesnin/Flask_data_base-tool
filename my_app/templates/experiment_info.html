@@ -1,72 +1,37 @@
 {% extends 'base.html' %}
 
 {% block tittle %}
-<div>
-    <div style="margin-top: 20px;">
-        <h1 style="font-size: 36px; color: #333;">Детали Эксперимента</h1>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-            <div style="flex: 1;">
-                <h3 style="font-size: 24px; color: #333;">Материал</h3>
-                <p style="font-size: 18px; color: #666;">{{ experiment.material.name }}</p>
-            </div>
-            <div style="flex: 1;">
-                <h3 style="font-size: 24px; color: #333;">Инструмент</h3>
-                <p style="font-size: 18px; color: #666;">{{ experiment.tool.name }}</p>
-            </div>
-            <div style="flex: 1;">
-                <h3 style="font-size: 24px; color: #333;">Покрытие</h3>
-                <p style="font-size: 18px; color: #666;">{{ experiment.coating.name }}</p>
-            </div>
-        </div>
+<main class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div><h1>Эксперимент №{{ experiment.id }}</h1><span class="badge text-bg-{{ 'success' if experiment.publication_status == 'published' else 'warning' }}">{{ 'Опубликован' if experiment.publication_status == 'published' else 'Черновик: ожидает проверки' }}</span></div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('web.experiments_table') }}">К списку экспериментов</a>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="card h-100"><div class="card-body"><h2 class="h5">Материал</h2><p class="mb-0">{{ experiment.material.name }}</p></div></div></div>
+    <div class="col-md-4"><div class="card h-100"><div class="card-body"><h2 class="h5">Инструмент</h2><p class="mb-0">{{ experiment.tool.name }}</p></div></div></div>
+    <div class="col-md-4"><div class="card h-100"><div class="card-body"><h2 class="h5">Покрытие</h2><p class="mb-0">{{ experiment.coating.name }}</p></div></div></div>
+  </div>
+  <section class="card mb-4"><div class="card-body">
+    <h2 class="h4">Исходные параметры</h2>
+    <div class="table-responsive"><table class="table table-sm table-bordered mb-0"><tbody>
+      <tr><th>Обороты шпинделя, об/мин</th><td>{{ experiment.spindle_speed|round(2) }}</td></tr>
+      <tr><th>Подача, мм/мин</th><td>{{ experiment.feed_table|round(2) }}</td></tr>
+      <tr><th>Глубина ap, мм</th><td>{{ experiment.depth_cut|round(2) }}</td></tr>
+      <tr><th>Ширина ae, мм</th><td>{{ experiment.width_cut|round(2) }}</td></tr>
+      <tr><th>Длина пути, мм</th><td>{{ experiment.length_path|round(2) }}</td></tr>
+      <tr><th>Стойкость, мин</th><td>{{ experiment.durability|round(2) }}</td></tr>
+      <tr><th>Дата проведения</th><td>{{ experiment.data_experiment.strftime('%d.%m.%Y') if experiment.data_experiment else '—' }}</td></tr>
+    </tbody></table></div>
+  </div></section>
 
-        <div style="background-color: #f8f8f8; padding: 20px; border-radius: 10px;">
-            <h2 style="font-size: 30px; color: #333;">Параметры Эксперимента</h2>
-            <table style="width: 100%; margin-top: 20px;">
-                <tr>
-                    <th style="font-size: 20px; color: #333;">Обороты Шпинделя, об/мин</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.spindle_speed | int }}</td>
-                </tr>
-                <tr>
-                    <th style="font-size: 20px; color: #333;">Подача Стола, мм/мин</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.feed_table | int }}</td>
-                </tr>
-                <tr>
-                    <th style="font-size: 20px; color: #333;">Глубина фрезерования, мм</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.depth_cut }}</td>
-                </tr>
-                <tr>
-                    <th style="font-size: 20px; color: #333;">Ширина фрезерования, мм</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.width_cut }}</td>
-                </tr>
-                <tr>
-                    <th style="font-size: 20px; color: #333;">Длина пути резания, мм</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.length_path | round(2) }}</td>
-                </tr>
-                <tr>
-                    <th style="font-size: 20px; color: #333;">Стойкость инстурмента, мин</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.durability | round(2) }}</td>
-                </tr>
-                <tr>
-                    <th style="font-size: 20px; color: #333;">Скорость резания, м/мин</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.cutter_speed | round(2) }}</td>
-                </tr>
-                <tr>
-                    <th style="font-size: 20px; color: #333;">Подача на Зуб, мм</th>
-                    <td style="font-size: 20px; color: #666;">{{ experiment.feed_of_teeth | round(3)}}</td>
-                </tr>
-            </table>
-        </div>
-    </div>
-    <iframe
-        src="/dash_wear_info/?experiment_id={{ experiment.id }}"
-        width="100%"
-        height="500"
-        style="border:none;"
-    ></iframe>
-    <div style="text-align: center; margin-top: 20px;">
-        <h2 style="font-size: 30px; color: #333;">Графики зависимости тангенциальной составляющей и температуры резания от пройденного пути</h2>
-        <img src="{{ url_for('static', filename=experiment.csv_file.path_graphic_s) }}" alt="График Сил" style="display: block; margin: 0 auto;">
-        <img src="{{ url_for('static', filename=experiment.csv_file.path_graphic_t) }}" alt="График Температуры" style="display: block; margin: 20px auto;">
-    </div>
-</div>
+  <section class="card"><div class="card-body">
+    <h2 class="h4">Экспериментальные графики</h2>
+    {% if experiment.wear_tables %}
+      <p class="text-muted">График построен только по фактическим точкам износа, сохранённым в эксперименте.</p>
+      <iframe src="/dash_wear_info/?experiment_id={{ experiment.id }}" width="100%" height="520" frameborder="0" title="График износа"></iframe>
+    {% else %}
+      <div class="alert alert-secondary mb-0">Для этого эксперимента нет измерений износа. Демонстрационные значения не добавляются автоматически.</div>
+    {% endif %}
+  </div></section>
+</main>
 {% endblock %}

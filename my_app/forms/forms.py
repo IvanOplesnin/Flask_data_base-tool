@@ -185,3 +185,14 @@ class TapForm(FlaskForm):
     thread_diameter = FloatField('Диаметр резьбы, мм', validators=[DataRequired(), NumberRange(min=0.01)])
     pitch = FloatField('Шаг резьбы, мм', validators=[DataRequired(), NumberRange(min=0.01)])
     submit = SubmitField('Добавить метчик')
+
+
+class InsertForm(FlaskForm):
+    """Форма режущей пластины для отдельного каталога."""
+
+    name = StringField('Обозначение пластины', validators=[DataRequired()])
+    material = StringField('Марка твёрдого сплава', validators=[DataRequired()])
+    geometry = StringField('Геометрия и форма', validators=[Optional()])
+    rake_angle = FloatField('Передний угол, °', validators=[Optional(), NumberRange(min=-90, max=90)])
+    relief_angle = FloatField('Задний угол, °', validators=[Optional(), NumberRange(min=0, max=90)])
+    submit = SubmitField('Добавить пластину')

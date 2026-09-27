@@ -24,22 +24,22 @@ WEAR_HEADERS = ('external_id', 'length', 'wear')
 MAX_ISSUES_IN_SUMMARY = 50
 
 EXPERIMENT_HEADER_ALIASES = {
-    'external_id': {'external_id', 'experiment_id', 'идентификатор_эксперимента'},
-    'material': {'material', 'материал'},
-    'tool': {'tool', 'инструмент'},
-    'coating': {'coating', 'покрытие'},
-    'spindle_speed': {'spindle_speed', 'обороты', 'обороты_шпинделя'},
-    'feed_table': {'feed_table', 'подача'},
-    'depth_cut': {'depth_cut', 'глубина_резания'},
-    'width_cut': {'width_cut', 'ширина_резания'},
-    'length_path': {'length_path', 'длина_обработки'},
-    'durability': {'durability', 'стойкость'},
-    'data_experiment': {'data_experiment', 'date', 'дата'},
+    'external_id': {'external_id', 'experiment_id', 'идентификатор_эксперимента', 'номер_эксперимента'},
+    'material': {'material', 'материал', 'обрабатываемый_материал'},
+    'tool': {'tool', 'инструмент', 'режущий_инструмент'},
+    'coating': {'coating', 'покрытие', 'покрытие_инструмента'},
+    'spindle_speed': {'spindle_speed', 'обороты', 'обороты_шпинделя', 'частота_вращения'},
+    'feed_table': {'feed_table', 'подача', 'подача_мм_мин'},
+    'depth_cut': {'depth_cut', 'глубина_резания', 'глубина_ap'},
+    'width_cut': {'width_cut', 'ширина_резания', 'ширина_ae'},
+    'length_path': {'length_path', 'длина_обработки', 'длина_пути'},
+    'durability': {'durability', 'стойкость', 'стойкость_инструмента'},
+    'data_experiment': {'data_experiment', 'date', 'дата', 'дата_эксперимента'},
 }
 WEAR_HEADER_ALIASES = {
-    'external_id': {'external_id', 'experiment_id', 'идентификатор_эксперимента'},
-    'length': {'length', 'длина', 'пройденный_путь'},
-    'wear': {'wear', 'износ'},
+    'external_id': {'external_id', 'experiment_id', 'идентификатор_эксперимента', 'номер_эксперимента'},
+    'length': {'length', 'длина', 'пройденный_путь', 'длина_пути'},
+    'wear': {'wear', 'износ', 'износ_мм'},
 }
 
 
@@ -321,15 +321,15 @@ def issues_summary(preview: ImportPreview) -> str | None:
     return '\n'.join(lines)
 
 
-def csv_template(kind: str) -> str:
+def csv_template(kind: str, language: str = 'technical') -> str:
     """Генерирует совместимый с Excel CSV-шаблон с разделителем `;`."""
     rows_by_kind = {
         'experiments': [
-            EXPERIMENT_HEADERS,
+            (('Идентификатор эксперимента', 'Материал', 'Инструмент', 'Покрытие', 'Обороты шпинделя', 'Подача', 'Глубина ap', 'Ширина ae', 'Длина пути', 'Стойкость', 'Дата эксперимента') if language == 'ru' else EXPERIMENT_HEADERS),
             ('EXP-001', 'Сталь 40Х', 'Фреза 10 мм', 'TiN', '1200', '240', '1', '5', '500', '35.5', '2026-08-29'),
         ],
         'wear': [
-            WEAR_HEADERS,
+            (('Идентификатор эксперимента', 'Длина пути', 'Износ') if language == 'ru' else WEAR_HEADERS),
             ('EXP-001', '100', '0.03'),
         ],
     }

@@ -3,12 +3,19 @@
 {% block tittle %}
 <main class="container py-4">
   <h1>{{ title }}</h1>
-  {% if item_type == 'tap' and current_user.role in ['admin', 'writer'] %}<p><a class="btn btn-primary" href="{{ url_for('web.add_tap') }}">Добавить метчик</a></p>{% endif %}
+  {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
+    <p>
+      {% if item_type == 'tap' %}<a class="btn btn-primary" href="{{ url_for('web.add_tap') }}">Добавить метчик</a>{% endif %}
+      {% if item_type == 'insert' %}<a class="btn btn-primary" href="{{ url_for('web.add_insert') }}">Добавить пластину</a>{% endif %}
+      {% if item_type == 'tool' %}<a class="btn btn-primary" href="{{ url_for('web.add', tool_type='milling') }}#tool-form">Добавить фрезу</a>{% endif %}
+    </p>
+  {% endif %}
   <table class="table table-striped"><thead><tr><th>Наименование</th><th>Материал</th><th>Описание</th><th>Действия</th></tr></thead><tbody>
   {% for item in items %}
     <tr><td>{% if item_type == 'insert' %}{{ item.name }}{% else %}<a href="{{ url_for('web.tools_info', tool_id=item.id) }}">{{ item.name }}</a>{% endif %}</td><td>{{ item.material if item_type == 'insert' else item.material_tool }}</td><td>
       {% if item_type == 'tap' and item.tap_geometry %}{{ item.tap_geometry.thread_standard }}, Ø{{ item.tap_geometry.thread_diameter }}, шаг {{ item.tap_geometry.pitch }}
       {% elif item_type == 'tool' and item.milling_geometry %}{{ item.milling_geometry.type_milling }}, Ø{{ item.milling_geometry.diameter }}
+      {% elif item_type == 'insert' %}{{ item.geometry or 'Геометрия не указана' }}{% if item.rake_angle is not none %}, γ {{ item.rake_angle }}°{% endif %}{% if item.relief_angle is not none %}, α {{ item.relief_angle }}°{% endif %}
       {% else %}—{% endif %}
     </td><td>
       {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}

@@ -26,7 +26,7 @@
     <div class="row">
         <a class="btn btn-primary" type="submit" href="/experiment/add">Добавить эксперимент</a>
     </div>
-    <h1> Таблица материалов </h1>
+    <h1>Эксперименты</h1>
     <form method="get" action="{{ url_for('web.experiments_table') }}">
         <div class="input-group mb-3">
             <input class="form-control" type="text" name="material" placeholder="Фильтр по материалу" value="{{ request_args.get('material', '') }}">
@@ -48,6 +48,7 @@
                 <th>Подача(s), мм/мин</th>
                 <th>Пройденная длина обработки(L), мм</th>
                 <th>Стойкость инструмента(T), мин</th>
+                <th>Публикация</th>
                 <th>Действия</th>
             </tr>
         </thead>
@@ -61,6 +62,7 @@
                 <td>{{ i.feed_table | int }}</td>
                 <td>{{ i.length_path | round(2)}}</td>
                 <td>{{ i.durability | round(2)}}</td>
+                <td><span class="badge text-bg-{{ 'success' if i.publication_status == 'published' else 'warning' }}">{{ 'Опубликован' if i.publication_status == 'published' else 'Ожидает проверки' }}</span></td>
                 <td>
                     <div class="btn-group btn-group-sm" role="group" aria-label="Действия с экспериментом">
                         {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
@@ -72,12 +74,14 @@
                     </div>
                 </td>
             </tr>
+            {% else %}
+                <tr><td colspan="8" class="text-muted">Экспериментов пока нет.</td></tr>
             {% endfor %}
         </tbody>
     </table>
     {% include '_pagination.html' %}
-    <div id="dash-container" style="height: 100vh;">
-            <iframe src="/dash_wear/" width="100%" height="100%" frameborder="0"></iframe>
+    <div class="card mt-4">
+      <div class="card-body"><h2 class="h5">Графики опубликованных экспериментов</h2><p class="text-muted">Выберите эксперименты внутри графика, чтобы сравнить фактический износ.</p><iframe src="/dash_wear/" width="100%" height="620" frameborder="0" title="Графики экспериментов"></iframe><a href="{{ url_for('web.experiments_reference_graphs') }}">Посмотреть демонстрационные зависимости</a></div>
     </div>
 </div>
 {% endblock %}

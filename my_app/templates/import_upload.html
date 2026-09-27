@@ -20,7 +20,8 @@
     <a class="btn btn-outline-secondary" href="{{ url_for('web.imports') }}">Отмена</a>
   </form>
   <h2 class="h5 mt-5">Обязательные столбцы</h2>
-  <p><code>external_id; material; tool; coating; spindle_speed; feed_table; depth_cut; width_cut; length_path; durability; data_experiment</code></p>
-  <p>Для износа: <code>external_id; length; wear</code>. Названия материала, инструмента и покрытия должны точно совпадать со справочниками системы.</p>
+      <p>Технические заголовки: <code>external_id; material; tool; coating; spindle_speed; feed_table; depth_cut; width_cut; length_path; durability; data_experiment</code></p>
+      <p>Русские заголовки также поддерживаются: <code>Идентификатор эксперимента; Материал; Инструмент; Покрытие; Обороты шпинделя; Подача; Глубина ap; Ширина ae; Длина пути; Стойкость; Дата эксперимента</code>.</p>
+      <p>Для износа: <code>external_id; length; wear</code> или <code>Идентификатор эксперимента; Длина пути; Износ</code>. Названия материала, инструмента и покрытия должны совпадать со справочниками.</p>
 </main>
 {% endblock %}

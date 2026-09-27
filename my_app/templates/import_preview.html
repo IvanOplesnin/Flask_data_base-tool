@@ -5,7 +5,8 @@
   <p><a href="{{ url_for('web.imports') }}">← К журналу импортов</a></p>
   <h1>Импорт №{{ import_batch.id }}</h1>
   <dl class="row">
-    <dt class="col-sm-3">Статус</dt><dd class="col-sm-9">{{ import_batch.status }}</dd>
+    <dt class="col-sm-3">Статус проверки</dt><dd class="col-sm-9">{{ {'preview': 'предварительная проверка', 'invalid': 'есть ошибки', 'completed': 'файлы импортированы', 'failed': 'ошибка импорта'}.get(import_batch.status, import_batch.status) }}</dd>
+    <dt class="col-sm-3">Публикация</dt><dd class="col-sm-9">{{ {'pending': 'ожидает проверки администратора', 'published': 'опубликован', 'rejected': 'отклонён'}.get(import_batch.review_status, import_batch.review_status) }}</dd>
     <dt class="col-sm-3">Файл экспериментов</dt><dd class="col-sm-9"><a href="{{ url_for('web.download_import_file', import_batch_id=import_batch.id, file_kind='experiments') }}">{{ import_batch.experiments_filename }}</a></dd>
     {% if import_batch.wear_filename %}<dt class="col-sm-3">Файл износа</dt><dd class="col-sm-9"><a href="{{ url_for('web.download_import_file', import_batch_id=import_batch.id, file_kind='wear') }}">{{ import_batch.wear_filename }}</a></dd>{% endif %}
     <dt class="col-sm-3">Проверено строк</dt><dd class="col-sm-9">Эксперименты: {{ import_batch.experiment_rows }}, износ: {{ import_batch.wear_rows }}</dd>
@@ -19,6 +20,27 @@
     </form>
   {% elif import_batch.status == 'completed' %}
     <div class="alert alert-success">Импорт завершён: добавлено экспериментов — {{ import_batch.imported_experiments }}, точек износа — {{ import_batch.imported_wear }}.</div>
+    {% if import_batch.review_status == 'pending' and can_publish %}
+      <div class="card mt-3">
+        <div class="card-body">
+          <h2 class="h5">Решение администратора</h2>
+          <p class="text-muted">Публикация сделает экспериментальные данные видимыми читателям и графикам.</p>
+          <form method="post" action="{{ url_for('web.publish_import', import_batch_id=import_batch.id) }}" class="d-inline">
+            {{ confirm_form.hidden_tag() }}
+            <button class="btn btn-success">Опубликовать</button>
+          </form>
+          <form method="post" action="{{ url_for('web.reject_import', import_batch_id=import_batch.id) }}" class="d-inline ms-2">
+            {{ confirm_form.hidden_tag() }}
+            <input type="text" name="review_comment" class="form-control d-inline-block w-auto" placeholder="Причина отказа">
+            <button class="btn btn-outline-danger">Отклонить</button>
+          </form>
+        </div>
+      </div>
+    {% elif import_batch.review_status == 'pending' %}
+      <div class="alert alert-info mt-3">Импорт ожидает проверки администратора.</div>
+    {% elif import_batch.review_status == 'rejected' %}
+      <div class="alert alert-warning mt-3">Импорт отклонён{% if import_batch.review_comment %}: {{ import_batch.review_comment }}{% endif %}</div>
+    {% endif %}
   {% else %}
     <div class="alert alert-danger">Импорт не выполнен.</div>
   {% endif %}

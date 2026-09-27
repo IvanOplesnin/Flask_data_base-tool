@@ -10,7 +10,7 @@ def create_dash_wear(flask_app):
 
     def serve_layout():
         with flask_app.app_context():
-            values: list[Experiment] = Experiment.query.all()
+            values: list[Experiment] = Experiment.query.filter_by(publication_status='published').all()
             dropdown_options = [
                 {
                     'label': f'{experiment.material.name}, {experiment.coating.name}, {experiment.tool.name}',
@@ -51,7 +51,7 @@ def create_dash_wear(flask_app):
             for experiment_id in selected_experiment_ids:
                 # Преобразуем experiment_id в правильный тип (int)
                 experiment_id = int(experiment_id)
-                experiment = Experiment.query.get(experiment_id)
+                experiment = Experiment.query.filter_by(id=experiment_id, publication_status='published').first()
                 if not experiment:
                     continue
                 wear_measurements: list[WearMeasurement] = WearMeasurement.query.filter_by(experiment_id=experiment_id).all()
@@ -104,7 +104,7 @@ def create_wear_on_info_experiments(flask_app):
             return go.Figure()
 
         with flask_app.app_context():
-            experiment = Experiment.query.get(int(experiment_id))
+            experiment = Experiment.query.filter_by(id=int(experiment_id), publication_status='published').first()
             if not experiment:
                 return go.Figure()
 
@@ -130,4 +130,3 @@ def create_wear_on_info_experiments(flask_app):
                 yaxis_title='Износ по задней поверхности (мм)',
             )
             return fig
-

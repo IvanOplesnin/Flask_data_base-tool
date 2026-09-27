@@ -8,23 +8,44 @@
 </head>
 <body>
 <div class="container">
-    <header class="d-flex justify-content-center py-3">
-      <ul class="nav nav-pills">
-        {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}<li class="nav-item"><a href="/add" class="nav-link active">Добавление данных</a></li>{% endif %}
-        {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}<li class="nav-item"><a href="{{ url_for('web.imports') }}" class="nav-link">Импорт CSV</a></li>{% endif %}
-        <li class="nav-item"><a href="/expected_parameters" class="nav-link">Режимы резания</a></li>
-        <li class="nav-item"><a href="/materials" class="nav-link">Материалы</a></li>
-        <li class="nav-item"><a href="/coatings" class="nav-link">Покрытия</a></li>
-        <li class="nav-item"><a href="/tools" class="nav-link">Инструменты</a></li>
-        <li class="nav-item"><a href="{{ url_for('web.milling_cutters_catalog') }}" class="nav-link">Фрезы</a></li>
-        <li class="nav-item"><a href="{{ url_for('web.inserts_catalog') }}" class="nav-link">Пластины</a></li>
-        <li class="nav-item"><a href="{{ url_for('web.taps_catalog') }}" class="nav-link">Метчики</a></li>
-        <li class="nav-item"><a href="/adhesive" class="nav-link">Триботехнические свойства</a></li>
-        <li class="nav-item"><a href="/experiments" class="nav-link">Эксперименты</a></li>
-        <li class="nav-item"><a href="/" class="nav-link">Начальная страница</a></li>
-        {% if current_user.is_authenticated and current_user.role == 'admin' %}<li class="nav-item"><a href="{{ url_for('web.users') }}" class="nav-link">Пользователи</a></li>{% endif %}
-        {% if current_user.is_authenticated %}<li class="nav-item"><form method="post" action="{{ url_for('web.logout') }}"><button class="btn btn-link nav-link">Выйти ({{ current_user.username }})</button></form></li>{% endif %}
-      </ul>
+    <header class="py-3">
+      <nav class="navbar navbar-expand-lg navbar-light bg-light rounded px-3">
+        <a class="navbar-brand" href="{{ url_for('web.select_parameters') }}">Режимы резания</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Открыть меню"><span class="navbar-toggler-icon"></span></button>
+        <div class="collapse navbar-collapse" id="mainNavigation">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item"><a href="{{ url_for('web.select_parameters') }}" class="nav-link">Начальная страница</a></li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Расчёты</a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('web.processing_selection', processing_type='turning') }}">Точение</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('web.processing_selection', processing_type='milling') }}">Фрезерование</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('web.processing_selection', processing_type='threading') }}">Резьбонарезание</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('web.recommended_speed') }}">Таблица рекомендаций</a></li>
+              </ul>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Справочники</a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/materials">Материалы</a></li>
+                <li><a class="dropdown-item" href="/coatings">Покрытия</a></li>
+                <li><a class="dropdown-item" href="/tools">Инструменты</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('web.milling_cutters_catalog') }}">Фрезы</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('web.inserts_catalog') }}">Пластины</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('web.taps_catalog') }}">Метчики</a></li>
+                <li><a class="dropdown-item" href="/adhesive">Триботехнические свойства</a></li>
+              </ul>
+            </li>
+            <li class="nav-item"><a href="{{ url_for('web.experiments_table') }}" class="nav-link">Эксперименты</a></li>
+            {% if current_user.is_authenticated and current_user.role in ['admin', 'writer'] %}
+              <li class="nav-item"><a href="{{ url_for('web.imports') }}" class="nav-link">Импорт CSV</a></li>
+              <li class="nav-item"><a href="{{ url_for('web.add') }}" class="nav-link">Добавить данные</a></li>
+            {% endif %}
+            {% if current_user.is_authenticated and current_user.role == 'admin' %}<li class="nav-item"><a href="{{ url_for('web.users') }}" class="nav-link">Пользователи</a></li>{% endif %}
+          </ul>
+          {% if current_user.is_authenticated %}<form method="post" action="{{ url_for('web.logout') }}" class="d-flex"><button class="btn btn-outline-secondary btn-sm">Выйти ({{ current_user.username }})</button></form>{% endif %}
+        </div>
+      </nav>
     </header>
   </div>
   <main class="container">
